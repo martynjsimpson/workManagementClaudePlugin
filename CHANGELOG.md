@@ -8,6 +8,29 @@ the release workflow, tags a GitHub Release.
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-08-10
+
+### Added
+
+- `/work-init --upgrade`, an alias for `--repair` with identical behavior.
+
+### Changed
+
+- `/work-init --repair`/`--upgrade` now runs the schema compatibility gate before doing
+  anything, instead of skipping straight to agent regeneration. A stale manifest no longer
+  risks a silent misread from a moved key — it's the one condition that previously slipped
+  past the gate every other command enforces.
+- When it finds a stale manifest, `/work-init --repair`/`--upgrade` now performs the
+  `/work-migrate` procedure itself, in the same session, before regenerating agents — so
+  upgrading after a plugin version bump is one command instead of two you have to know to run
+  in order.
+- `config-resolution.md`'s schema-gate messages, and every other pointer to a stale schema
+  across the commands and skills, now recommend `/work-init --upgrade` instead of bare
+  `/work-migrate`.
+
+`/work-migrate` is unchanged and still directly callable — for reviewing or controlling the
+manifest edit on its own, separate from agent regeneration.
+
 ## [0.8.2] - 2026-08-10
 
 ### Changed

@@ -1,6 +1,6 @@
 ---
-description: Set up (or repair) the work-management model in this repository — write the manifest, scaffold the work files, and generate the agent roster.
-argument-hint: "[--dry-run] [--repair]"
+description: Set up, repair, or upgrade the work-management model in this repository — write the manifest, scaffold the work files, generate the agent roster, and bring a stale manifest current first if needed.
+argument-hint: "[--dry-run] [--repair|--upgrade]"
 ---
 
 Set this repository up to use the work-management model. Everything project-specific ends
@@ -34,12 +34,13 @@ route around. Say so plainly, then compensate for the missing safety net:
 - State clearly that there is **no undo**. Nothing this command writes can be reverted by
   discarding a diff.
 - **Take a backup before writing anything.** Back up **every existing file this run will
-  modify or generate over** — not only the agent files. That means, at minimum: each agent
-  file you will extract from or regenerate; `<version.file>` and every path in
-  `<version.mirrors>` if you will initialise or change a version; the
-  `<project.domain_rules>` file if you will append to it; and any existing `stack` file you
-  will append to. A file being *created* needs no backup — deleting it is a clean undo.
-  Getting this wrong is how an in-place edit to a dependency manifest becomes unrecoverable.
+  modify or generate over** — not only the agent files. That means, at minimum: the manifest
+  itself, if Step 1 finds one and Step 1a will edit it; each agent file you will extract from
+  or regenerate; `<version.file>` and every path in `<version.mirrors>` if you will initialise
+  or change a version; the `<project.domain_rules>` file if you will append to it; and any
+  existing `stack` file you will append to. A file being *created* needs no backup — deleting
+  it is a clean undo. Getting this wrong is how an in-place edit to a dependency manifest
+  becomes unrecoverable.
 - **Put the backups in one timestamped directory, not beside the originals.** A sibling
   `.bak` file inside a directory that gets scanned for definitions becomes a phantom
   definition — `.claude/agents/backend-developer.md.bak` will be read as an agent. Use a
@@ -79,15 +80,67 @@ not a dry run.
 Look for an existing manifest using the discovery order in
 `${CLAUDE_PLUGIN_ROOT}/skills/work-model/references/config-resolution.md`.
 
-- **Manifest exists and `--repair` was not passed:** report where it is and what it
-  configures, then ask whether to (a) regenerate the agent files from it, (b) validate the
-  work files against it, or (c) stop. Do not overwrite a manifest that already exists.
-- **Manifest exists and `--repair` was passed:** skip to Step 5, regenerating agents and
-  re-validating without touching the manifest. Note that `--repair` only regenerates files
-  carrying the `generated-by` marker. On a first adoption no file carries one, so repair
-  will correctly skip every hand-written agent — say so explicitly rather than reporting a
-  silent no-op, because the expected outcome was regeneration.
-- **No manifest:** continue.
+- **No manifest:** continue to Step 2.
+- **Manifest exists:** before anything else, run the schema compatibility gate from
+  `config-resolution.md` — read `model_version` and run the shape cross-check. Do this
+  regardless of whether `--repair`/`--upgrade` was passed. Regenerating agents or offering the
+  menu below off a manifest whose keys have moved is exactly the silent-misread failure the
+  gate exists to prevent, and this command is not exempt from it just because it is also the
+  one that can fix it.
+
+  - **Newer than this plugin understands:** stop. Report that the manifest is newer than the
+    plugin and the plugin needs updating. Do not proceed by ignoring unknown fields.
+  - **Stale** (`model_version` below current, absent, or declared current but the shape
+    cross-check disagrees): do not fall into either branch below. Go to
+    **Step 1a — Upgrade a stale manifest** instead.
+  - **Current and shape matches:** continue to whichever of the next two branches applies.
+
+- **Manifest exists, current schema, `--repair`/`--upgrade` not passed:** report where it is
+  and what it configures, then ask whether to (a) regenerate the agent files from it, (b)
+  validate the work files against it, or (c) stop. Do not overwrite a manifest that already
+  exists.
+- **Manifest exists, current schema, `--repair` or `--upgrade` passed:** skip to Step 5,
+  regenerating agents and re-validating without touching the manifest. Note that this only
+  regenerates files carrying the `generated-by` marker. On a first adoption no file carries
+  one, so it will correctly skip every hand-written agent — say so explicitly rather than
+  reporting a silent no-op, because the expected outcome was regeneration.
+
+`--repair` and `--upgrade` are the same flag under two names, with identical behaviour.
+`--upgrade` reads better right after bumping the plugin version; `--repair` reads better when
+the schema hasn't changed and you just need agent files regenerated or fixed.
+
+### Step 1a — Upgrade a stale manifest
+
+Say plainly what is happening and why: this manifest was written against an older version of
+the plugin, and every other command has already been refusing to touch it rather than risk
+misreading a moved key. Bringing it current is a prerequisite for everything else this command
+does — including plain `--repair`'s agent regeneration, since a scope table derived from a
+stale manifest would be wrong in the same silent way.
+
+Say that this performs the same procedure `/work-migrate` describes, in this session, so
+nothing is left half-done waiting on a second command the user has to remember to run
+separately. Then get one confirmation to proceed with the upgrade — not per-decision yet, just
+permission to start.
+
+If they decline, stop cleanly. Say that `/work-migrate` exists standalone for running just the
+manifest edit on its own — for example to review that diff before touching agent files — and
+that this command can be re-run to finish the job once that is done.
+
+If they confirm, perform `${CLAUDE_PLUGIN_ROOT}/commands/work-migrate.md` Steps 1 through 5
+exactly as written there: detect the era, plan the transition, present the plan and get
+approval on each decision separately, edit the manifest textually, and verify. Use this
+command's own Step 0 preflight (already run) rather than work-migrate's — do not preflight
+twice or take a second backup.
+
+**Under `--dry-run`:** follow work-migrate's own `--dry-run` behaviour for this half — print
+the detected era with evidence, the full proposed manifest, and every decision that would need
+an answer, writing nothing — then continue into this command's own `--dry-run` reporting in
+Step 5 for the regeneration half. Nothing gets written for either half.
+
+Once verification passes and the manifest is confirmed current, continue directly into this
+command's Step 5 to regenerate the agent files against the now-current manifest. Report the
+migration and the regeneration together at the end in Step 6 — this is one operation from the
+user's perspective even though it followed two specifications to get there.
 
 Then survey the repository so the interview asks about real things rather than
 hypotheticals. Look for:
@@ -376,6 +429,9 @@ Run the conformance checks listed in the `work-model` skill against what now exi
 Confirm before reporting success that no generated file still contains a `{{` placeholder,
 and that every file you claimed to write actually exists on disk. Report:
 
+- **if Step 1a ran** — the era detected, mechanical changes applied, decisions taken with the
+  answers given, and anything removed, exactly as work-migrate.md's own Step 6 specifies, ahead
+  of everything below;
 - the manifest location and the key decisions it records;
 - files created, files skipped because they already existed;
 - **content extracted** — what moved out of each hand-written agent file, to where, with
@@ -402,7 +458,9 @@ skill to start capturing requests.
   `stack` and `domain_rules` files you extract into; `<paths.changelog>` if creating it; and
   the version fields listed in `<version.file>` / `<version.mirrors>` if
   initialising them. Nothing else.
-- Do not overwrite an existing manifest or work file.
+- Do not overwrite an existing manifest or work file, except the Step 1a upgrade of a stale
+  manifest — and even there, edit it textually per work-migrate.md's method, never parse and
+  re-serialise the YAML.
 - Do not change a version that already has a value.
 - Do not touch a version-bearing file that is not named in the manifest, even if the survey
   found it.

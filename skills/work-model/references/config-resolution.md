@@ -36,18 +36,25 @@ misread a key that has moved — silently, and with a plausible-looking result.
 | Condition | Action |
 |---|---|
 | `model_version` == 3 | Continue to the shape cross-check below. |
-| `model_version` < 3 | **Stop.** Report: "This manifest uses schema version N; this plugin needs version 3. Run `/work-migrate` to update it." |
+| `model_version` < 3 | **Stop.** Report: "This manifest uses schema version N; this plugin needs version 3. Run `/work-init --upgrade` to update it." |
 | `model_version` > 3 | **Stop.** Report that the manifest is newer than the plugin, and that the plugin should be updated. Do not proceed by ignoring unknown fields. |
-| `model_version` absent | **Stop.** Treat as pre-3 and direct to `/work-migrate`. |
+| `model_version` absent | **Stop.** Treat as pre-3 and direct to `/work-init --upgrade`. |
 
-**Never auto-migrate.** Rewriting the manifest as a side effect of running `/work-plan` is a
-surprise nobody asked for, and the manifest is the one file meant to stay human-authoritative.
+**Never auto-migrate.** No command may rewrite the manifest as a side effect of doing something
+else — a surprise nobody asked for, and the manifest is the one file meant to stay
+human-authoritative. `/work-init --upgrade` (alias `--repair`) is the one deliberate exception:
+running it *is* asking for the manifest to be brought current, and it still interviews the human
+for every decision the schema change requires rather than filling one in silently. It performs
+the same procedure `/work-migrate` describes, in the same session, before regenerating the agent
+files that depend on the result. Run `/work-migrate` directly instead when you want to review or
+control the manifest edit on its own, separate from agent regeneration.
 
 **Shape cross-check.** A manifest can declare `3` and still be wrong — hand-edited, or
 part-migrated. Confirm the current markers are present: a top-level `version:` block; `vcs:`
 with `system`; `release:` carrying only `changelog`, `pipeline`, `deploy_steps`; `testing:` with
 `policy_document`; `excludes` on every agent. If the declaration and the shape disagree, say so
-and stop. Do not repair it inline.
+and stop. Do not repair it inline — except inside `/work-init --upgrade`, which exists for
+exactly this.
 
 For what each earlier era looks like and how it maps forward, read `schema-history.md`. Note
 especially that `model_version: 2` covers four different shapes, because the number was left

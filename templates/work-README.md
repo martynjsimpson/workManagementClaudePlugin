@@ -24,8 +24,8 @@ the local operating guide; the model is portable and identical across projects.
 | `/work-spike` | Runs investigation-only items, producing one Findings/Recommendations document each. |
 | `/work-review-deferred` | Re-triages parked items — the only thing that surfaces them. |
 | `/work-prune` | Trims completed items whose delivery is already durably recorded. |
-| `/work-init --repair` | Regenerates the agent roster after a manifest change. |
-| `/work-migrate` | Updates this manifest to the current schema after a plugin upgrade. |
+| `/work-init --repair` / `--upgrade` | Regenerates the agent roster after a manifest change, upgrading a stale manifest first if the plugin's schema has moved. |
+| `/work-migrate` | Updates this manifest to the current schema on its own, without touching agents. Runs automatically inside `/work-init --upgrade`. |
 
 The `work-capture` skill handles quick intake without starting a session.
 

@@ -26,7 +26,7 @@ guessing paths.
 
 **The supported schema is `model_version: 3`.** The compatibility gate in
 `references/config-resolution.md` is checked before any other field, by every command. A stale
-manifest is a stop with a pointer to `/work-migrate`, never an auto-migration.
+manifest is a stop with a pointer to `/work-init --upgrade`, never an auto-migration.
 
 `references/schema-history.md` holds every earlier era, the keys that identify it, and its
 transition forward. Consult it when asked what changed between versions, or when a manifest does
@@ -96,8 +96,8 @@ touched by hand, verify:
 - **Hygiene** — flag if `done` items older than the most recent few releases are still
   present, which means pruning has lapsed. Suggest `/work-prune`.
 - **Schema** — `model_version` matches the supported version, *and* the file's shape agrees with
-  its own declaration. A mismatch either way is a stop; the fix is `/work-migrate`, followed by
-  `/work-init --repair` to regenerate the agents.
+  its own declaration. A mismatch either way is a stop; the fix is `/work-init --upgrade`, which
+  migrates the manifest and regenerates the agents in one pass.
 
 Report findings as a list with a recommended fix for each. Do not silently repair
 vocabulary drift: if `requests.md` uses a type the manifest does not list, the manifest
@@ -105,8 +105,10 @@ may be wrong rather than the data. Ask which is authoritative.
 
 ## Related commands
 
-`/work-init` sets a project up and `/work-migrate` brings an older manifest to the current
-schema. `/work-ingest` backfills intake from a PRD or other existing material. `/work-plan`
+`/work-init` sets a project up, and `/work-init --upgrade` brings an older manifest to the
+current schema before regenerating agents — it runs the `/work-migrate` procedure itself, which
+also stays callable on its own when you want that edit reviewed separately. `/work-ingest`
+backfills intake from a PRD or other existing material. `/work-plan`
 refines and proposes scope. `/work-release` delivers. `/work-spike` runs investigations.
 `/work-review-deferred` re-triages parked items. `/work-prune` trims completed history. The
 `work-capture` skill handles quick intake.

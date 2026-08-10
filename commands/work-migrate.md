@@ -6,6 +6,13 @@ argument-hint: "[--dry-run]"
 Bring an existing manifest up to the current schema. This is the only command permitted to
 rewrite `project.yml`, and it exists so that no other command has to guess at an older shape.
 
+Most of the time you will not run this directly. `/work-init --upgrade` (alias `--repair`)
+detects a stale manifest and performs this exact procedure automatically, in the same session,
+before regenerating the agent files that depend on the result — that is the command to reach
+for after bumping the plugin version. Run this command on its own when you want to review or
+control the manifest edit by itself, separate from agent regeneration — for example to look at
+the diff before anything downstream reads it.
+
 Read `${CLAUDE_PLUGIN_ROOT}/skills/work-model/references/schema-history.md` first. It defines
 the current version, every earlier era with the keys that identify it, and the transition from
 each.
@@ -133,10 +140,10 @@ second pass over a file you have already half-edited.
 - comments preserved, added, and removed;
 - backup location under `vcs.system: none`, with a reminder to delete it once satisfied.
 
-Then name the follow-up: **run `/work-init --repair`.** The generated agent files carry scope
-tables derived from the manifest, so a migration that adds `excludes` or changes ownership leaves
-those files stale until they are regenerated. A migration is not finished until that is done, and
-saying so is part of this command's job.
+Then name the follow-up: **run `/work-init --repair` (or `--upgrade`, the same flag).** The
+generated agent files carry scope tables derived from the manifest, so a migration that adds
+`excludes` or changes ownership leaves those files stale until they are regenerated. A migration
+is not finished until that is done, and saying so is part of this command's job.
 
 ## Constraints
 

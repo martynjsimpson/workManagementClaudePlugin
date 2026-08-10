@@ -103,8 +103,8 @@ code file with a `TODO` comment, and never anything the manifest points at.
 | `/work-spike` | Runs investigation-only items, producing one Findings/Recommendations document each. Refuses to run non-spike work. |
 | `/work-review-deferred` | Re-triages parked items — keep, block, promote, or reject. The only thing that surfaces deferred work. |
 | `/work-prune` | Trims completed items whose delivery is already in the changelog or tags. |
-| `/work-init` | Sets a project up. `--dry-run` writes nothing; `--repair` regenerates agents after a manifest change. |
-| `/work-migrate` | Updates a `project.yml` written against an older plugin version to the current schema, preserving its comments. |
+| `/work-init` | Sets a project up. `--dry-run` writes nothing; `--repair`/`--upgrade` (same flag) regenerates agents after a manifest change, upgrading a stale manifest first if the schema has moved. |
+| `/work-migrate` | Updates a `project.yml` written against an older plugin version to the current schema, preserving its comments. Runs automatically inside `/work-init --upgrade`; call it directly to review the manifest edit on its own. |
 
 ## Skills
 
@@ -171,17 +171,24 @@ recorded in the Step 2 report and carried verbatim into the note.
 
 **The schema is versioned, and the gate is real.** `model_version` is the schema contract. Every
 command checks it before reading anything else and stops on a mismatch, pointing at
-`/work-migrate`. Nothing auto-migrates — rewriting the manifest as a side effect of a planning
-session is a surprise, and the manifest is the one file meant to stay human-authoritative.
+`/work-init --upgrade`. Nothing auto-migrates — rewriting the manifest as a side effect of a
+planning session is a surprise, and the manifest is the one file meant to stay
+human-authoritative.
 
 A newer-than-plugin manifest is also a stop, not a shrug: a stale plugin silently ignoring a
 field it does not recognise is worse than a refusal.
 
-`/work-migrate` edits the file **textually rather than round-tripping the YAML**, because a
-manifest in real use carries hand-written comments explaining why the project is configured as it
-is — and a parse-and-redump destroys every one of them while producing a file that parses
-identically. It asks about anything with no correct default (`version.mirrors` especially) rather
-than filling it in.
+**`/work-init --repair` and `--upgrade` are the same flag, and both check the gate too.**
+Regenerating agents off a manifest the gate would otherwise refuse is the same silent-misread
+risk under a friendlier name, so `--repair`/`--upgrade` runs the gate first like everything
+else. When it finds a stale manifest it doesn't just point elsewhere — it performs the
+`/work-migrate` procedure itself, in the same session, then continues into agent regeneration.
+That procedure edits the file **textually rather than round-tripping the YAML**, because a
+manifest in real use carries hand-written comments explaining why the project is configured as
+it is — and a parse-and-redump destroys every one of them while producing a file that parses
+identically. It asks about anything with no correct default (`version.mirrors` especially)
+rather than filling it in. Run `/work-migrate` directly instead when you want that edit
+reviewed on its own, before anything touches the agent files.
 
 **Version control is optional.** `vcs.system: none` is a first-class configuration, not a
 degraded one. Every VCS step is then skipped rather than failed — no command asks for a
