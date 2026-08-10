@@ -8,6 +8,14 @@ the release workflow, tags a GitHub Release.
 
 ## [Unreleased]
 
+## [0.8.1] - 2026-08-10
+
+### Added
+
+- Release automation: a workflow tags a GitHub Release whenever `version`
+  bumps in `.claude-plugin/plugin.json`, using the matching section of this
+  file as release notes.
+
 ## [0.8.0] - 2026-08-10
 
 ### Added
