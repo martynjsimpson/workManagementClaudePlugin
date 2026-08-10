@@ -8,6 +8,12 @@ the release workflow, tags a GitHub Release.
 
 ## [Unreleased]
 
+## [0.8.2] - 2026-08-10
+
+### Changed
+
+- Simplified the license from MIT + Commons Clause to plain MIT.
+
 ## [0.8.1] - 2026-08-10
 
 ### Added

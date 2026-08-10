@@ -233,8 +233,4 @@ See [CHANGELOG.md](CHANGELOG.md).
 
 ## License
 
-MIT, with the [Commons Clause](https://commonsclause.com/). Free to use, modify,
-and self-host — including for your own commercial work — but you may not sell
-the plugin itself or a product/service whose value comes substantially from it.
-See [LICENSE](LICENSE). (GitHub's license detector labels this "Other" since
-Commons Clause isn't a standard SPDX identifier — that's expected.)
+MIT. See [LICENSE](LICENSE).
