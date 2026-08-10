@@ -8,6 +8,19 @@ the release workflow, tags a GitHub Release.
 
 ## [Unreleased]
 
+## [0.9.1] - 2026-08-10
+
+### Changed
+
+- Trimmed the comments in `templates/project.yml` by about a third. The `vcs`,
+  `version`, and `release` blocks had grown into essays duplicating rationale
+  that already lives in the README and the `work-model` skill; this file
+  lives in every adopting project, so it now says what to put where and
+  points elsewhere for the why. `model_version`'s comment no longer carries
+  plugin-maintainer instructions (schema-history.md already has those).
+  No field, default, or structure changed — this does not require a schema
+  bump, and existing manifests are unaffected.
+
 ## [0.9.0] - 2026-08-10
 
 ### Added
