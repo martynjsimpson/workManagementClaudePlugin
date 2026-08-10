@@ -1,0 +1,16 @@
+{
+  "name": "work-management",
+  "version": "0.8.0",
+  "description": "Project-agnostic Request -> Work item -> Active release -> Done delivery model for AI-supported development. Commands resolve all project facts from a single docs/work/project.yml manifest, so the same engine drives any repository.",
+  "author": {
+    "name": "Martyn Simpson"
+  },
+  "keywords": [
+    "planning",
+    "backlog",
+    "release",
+    "workflow",
+    "agents"
+  ],
+  "license": "MIT"
+}

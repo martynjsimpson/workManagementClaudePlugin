@@ -1,0 +1,14 @@
+{
+  "name": "work-management",
+  "description": "Personal marketplace for the work-management plugin: a project-agnostic Request -> Work item -> Active release -> Done delivery model for AI-supported development.",
+  "owner": {
+    "name": "Martyn Simpson"
+  },
+  "plugins": [
+    {
+      "name": "work-management",
+      "source": "./",
+      "description": "Project-agnostic Request -> Work item -> Active release -> Done delivery model for AI-supported development."
+    }
+  ]
+}

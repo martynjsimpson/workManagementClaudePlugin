@@ -1,0 +1,37 @@
+# Refined, agent-readable work items.
+#
+# Written by /work-plan. Implementers start here, never from a historical planning
+# document. Acceptance criteria must be strong enough to make that possible.
+#
+# Valid type values:     {{WORK_TYPES}}
+# Valid priority values: {{PRIORITIES}}
+#
+# Valid status values:
+#   needs-refinement  ready  needs-audit  shippable-candidate
+#   in-progress  needs-test  blocked  done  deferred
+#
+#   blocked  MUST carry blocked_on naming the dependency.
+#   deferred MUST NOT carry blocked_on — if there is a dependency, it is blocked.
+#   done     carries done_in; completion is never encoded in the status value.
+#
+# Field reference:
+#   id                unique work item identifier
+#   source_request    the originating request ID, or null
+#   title             short description
+#   type              from the list above
+#   capability        product area or capability
+#   status            from the list above
+#   priority          from the list above
+#   confidence        high | medium | low
+#   summary           multi-sentence description of the work
+#   acceptance        list of testable acceptance criteria
+#   remaining         what is still to do
+#   dependencies      list of work item IDs
+#   suggested_agents  agent names from project.yml agents[] only
+#   evidence          the spec section, file, or note justifying this item
+#   done_in           list of versions shipped in (only when status is done)
+#   blocked_on        named dependency (only when status is blocked)
+
+model_version: 1
+
+items: []
