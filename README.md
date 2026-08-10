@@ -21,7 +21,19 @@ a command.
 
 ## Install and set up
 
-Install the plugin, then in the repository:
+Add this repo as a marketplace, then install the plugin:
+
+```
+/plugin marketplace add martynjsimpson/workManagementClaudePlugin
+/plugin install work-management@work-management
+```
+
+Updates ship by pushing a new `version` to `.claude-plugin/plugin.json` — enable
+auto-update for this marketplace (`/plugin` → **Marketplaces** → **Enable auto-update**)
+to pick them up automatically, or run `/plugin marketplace update` and `/plugin update`
+by hand.
+
+Then, in the repository you want to manage work for:
 
 ```
 /work-init --dry-run     # see exactly what it would do, writing nothing
@@ -224,4 +236,5 @@ See [CHANGELOG.md](CHANGELOG.md).
 MIT, with the [Commons Clause](https://commonsclause.com/). Free to use, modify,
 and self-host — including for your own commercial work — but you may not sell
 the plugin itself or a product/service whose value comes substantially from it.
-See [LICENSE](LICENSE).
+See [LICENSE](LICENSE). (GitHub's license detector labels this "Other" since
+Commons Clause isn't a standard SPDX identifier — that's expected.)

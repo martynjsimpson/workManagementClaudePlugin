@@ -3,8 +3,11 @@
   "version": "0.8.1",
   "description": "Project-agnostic Request -> Work item -> Active release -> Done delivery model for AI-supported development. Commands resolve all project facts from a single docs/work/project.yml manifest, so the same engine drives any repository.",
   "author": {
-    "name": "Martyn Simpson"
+    "name": "Martyn Simpson",
+    "url": "https://github.com/martynjsimpson"
   },
+  "homepage": "https://github.com/martynjsimpson/workManagementClaudePlugin",
+  "repository": "https://github.com/martynjsimpson/workManagementClaudePlugin",
   "keywords": [
     "planning",
     "backlog",
