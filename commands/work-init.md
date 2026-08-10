@@ -142,8 +142,11 @@ command's Step 5 to regenerate the agent files against the now-current manifest.
 migration and the regeneration together at the end in Step 6 — this is one operation from the
 user's perspective even though it followed two specifications to get there.
 
-Then survey the repository so the interview asks about real things rather than
-hypotheticals. Look for:
+## Step 2 — Interview
+
+This step is reached only from Step 1's "No manifest" branch — every other branch skips
+straight to Step 5. Before asking anything, survey the repository so the interview asks
+about real things rather than hypotheticals. Look for:
 
 - a dependency manifest (`package.json`, `pyproject.toml`, `go.mod`, `*.csproj`,
   `Cargo.toml`, `pom.xml`);
@@ -175,9 +178,7 @@ hypotheticals. Look for:
 
 Note what you found — you will offer it as defaults.
 
-## Step 2 — Interview
-
-Ask about the things you cannot reliably infer. Use one multiple-choice question per
+Then ask about the things you cannot reliably infer. Use one multiple-choice question per
 topic where the options are genuinely distinct, and offer detected values as the
 recommended option. Do not ask about anything the survey already answered
 unambiguously.

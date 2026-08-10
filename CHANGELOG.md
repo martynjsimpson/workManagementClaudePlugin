@@ -8,6 +8,42 @@ the release workflow, tags a GitHub Release.
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-08-10
+
+First stable release. The model (schema `model_version: 3`) and command surface are
+considered settled — this and future 1.x releases are docs, templates, and tooling
+polish rather than behavioral changes, unless a changelog entry says otherwise.
+
+### Added
+
+- `SECURITY.md` — how to report a vulnerability privately, and the supported-versions
+  policy (latest release only, via auto-update or `/plugin update`).
+
+### Fixed
+
+- `/work-init`: the "survey the repository" instruction got stranded under the `Step 1a`
+  heading added in 0.9.0, positioned *after* Step 1a's own conclusion ("continue directly
+  into Step 5"). An agent upgrading a stale manifest would hit a dangling, contradictory
+  survey instruction on the way out. That survey only ever applies to the no-manifest path
+  that reaches Step 2's interview, so it's now Step 2's lead-in instead, where it's
+  unambiguous.
+- `work-capture` skill: a broken line wrap left "malformed," orphaned on its own line
+  mid-sentence, also from 0.9.0. Rejoined into one sentence.
+
+### Changed
+
+- Trimmed `templates/active-release.md`'s HTML-comment block by about a third. It's hidden
+  from rendered Markdown, but still re-read by `/work-plan` and `/work-release` on every
+  load, and most of its version/branch-ordering detail duplicated `/work-release`'s own
+  Steps 2 through 2b almost verbatim. Kept the section skeleton in full — it's the actual
+  scaffold `/work-plan` writes from — and compressed the status legend and version/branch
+  paragraphs to pointers at the authoritative source. Same pass as `project.yml`,
+  `backlog.yml`, and `requests.md` in 0.9.1/0.9.2.
+
+Pre-v1.0 audit pass: read every command, skill, and template end to end looking for stale
+cross-references, leftover verbosity, and formatting glitches. No field, status, or behavior
+changed beyond the Step 1a fix above — doesn't require a schema bump.
+
 ## [0.9.3] - 2026-08-10
 
 ### Fixed

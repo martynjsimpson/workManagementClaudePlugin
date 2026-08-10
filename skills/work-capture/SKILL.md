@@ -35,8 +35,7 @@ still runs, provided the fields it reads are present and well-formed: `paths.wor
 Mention the stale schema once, in one sentence, and name `/work-init --upgrade`. Then get on
 with the capture. The reasoning: refusing here loses the note, and the note is the whole point —
 whereas the schema can be fixed at any time. If a field capture actually needs is missing or
-malformed,
-stop like any other command.
+malformed, stop like any other command.
 
 ## Write the request
 
