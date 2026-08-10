@@ -1,25 +1,22 @@
 # Requests
 
-Human-facing intake. Capture ideas, bugs, annoyances, improvements, security concerns,
-documentation gaps, and technical debt here. Requests may be rough — they do not need to
-be implementation-ready.
+Human-facing intake — ideas, bugs, annoyances, improvements, security concerns, docs gaps,
+tech debt. Requests may be rough; they don't need to be implementation-ready.
 
-Request status describes the state of the human-facing ask, not the implementation status
-of every derived work item. Detailed delivery state belongs in `backlog.yml` and
+Status here tracks the ask, not delivery — detailed progress lives in `backlog.yml` and
 `active-release.md`.
 
-- `inbox` — captured, not yet reviewed.
-- `needs-refinement` — reviewed, but needs clarification, scoping, splitting, or human
-  input before reliable work items exist.
-- `refined` — one or more work items exist, but none are currently selected for delivery.
-- `in-active-release` — one or more derived work items are selected in `active-release.md`.
-- `partially-done` — some of the outcome has shipped, but meaningful scope remains.
-- `done` — the human-facing ask is satisfied.
-- `blocked` — cannot proceed until a named dependency resolves. Always include a
-  `Blocked on:` field. Reviewed at every planning session.
-- `deferred` — deliberately parked with no specific dependency. Not surfaced
-  automatically; reviewed only via `/work-review-deferred`.
-- `rejected` / `duplicate` — whichever best describes what happened to the ask.
+| Status | Meaning |
+|---|---|
+| `inbox` | Captured, not yet reviewed. |
+| `needs-refinement` | Needs clarification, scoping, or splitting before work items exist. |
+| `refined` | Work items exist; none are yet selected for delivery. |
+| `in-active-release` | A derived work item is selected in `active-release.md`. |
+| `partially-done` | Some outcome shipped; meaningful scope remains. |
+| `done` | The ask is satisfied. |
+| `blocked` | Needs a `Blocked on:` field naming the dependency. Reviewed every planning session. |
+| `deferred` | Parked, no specific dependency. Reviewed only via `/work-review-deferred`. |
+| `rejected` / `duplicate` | Whichever fits. |
 
 Valid `Type:` values: {{REQUEST_TYPES}}
 Valid `Priority:` values: {{PRIORITIES}}

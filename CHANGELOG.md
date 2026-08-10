@@ -8,6 +8,25 @@ the release workflow, tags a GitHub Release.
 
 ## [Unreleased]
 
+## [0.9.2] - 2026-08-10
+
+### Changed
+
+- Trimmed `templates/backlog.yml`'s field-reference comment from a full per-field
+  description list (duplicating `model.md`'s annotated schema almost verbatim) to a
+  compact field list pointing at the `work-model` skill for semantics. Kept the
+  `blocked`/`deferred`/`done` rules in full since commands actually enforce them.
+- Reformatted `templates/requests.md`'s status legend from prose bullets to a table,
+  matching how `model.md` itself presents the same statuses, and tightened the intro.
+  The legend stays complete — the model requires it at the top of every `requests.md` —
+  just more compact.
+
+Both files are live working files, not one-time scaffolding, so their comments get
+re-read on every load; this is the same "say what to put where, point elsewhere for the
+why" pass as `project.yml` in 0.9.1. No field, placeholder, or status changed — verified
+`backlog.yml` still parses to the same data and every `{{PLACEHOLDER}}` is intact. Doesn't
+require a schema bump.
+
 ## [0.9.1] - 2026-08-10
 
 ### Changed
