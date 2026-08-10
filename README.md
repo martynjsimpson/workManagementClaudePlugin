@@ -215,6 +215,10 @@ work-management/
     PLACEHOLDERS.md         how /work-init fills each template
 ```
 
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md).
+
 ## License
 
 MIT, with the [Commons Clause](https://commonsclause.com/). Free to use, modify,
