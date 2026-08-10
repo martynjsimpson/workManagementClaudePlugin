@@ -8,6 +8,15 @@ the release workflow, tags a GitHub Release.
 
 ## [Unreleased]
 
+## [0.9.3] - 2026-08-10
+
+### Fixed
+
+- Release workflow: bumped `actions/checkout` from `v4` to `v7`, clearing the "Node.js 20
+  is deprecated" warning. Node 24 support landed in `actions/checkout@v5.0.0`; `v4` still
+  ships a Node 20 action, so it was being force-run on a runtime it wasn't built for. No
+  behavior change, just a clean run.
+
 ## [0.9.2] - 2026-08-10
 
 ### Changed
