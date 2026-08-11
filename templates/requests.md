@@ -12,7 +12,7 @@ Status here tracks the ask, not delivery — detailed progress lives in `backlog
 | `needs-refinement` | Needs clarification, scoping, or splitting before work items exist. |
 | `refined` | Work items exist; none are yet selected for delivery. |
 | `in-active-release` | A derived work item is selected in `active-release.md`. |
-| `partially-done` | Some outcome shipped; meaningful scope remains. |
+| `partially-done` | Some outcome shipped; meaningful scope remains. Reviewed every planning session — file under `## Refined requests`, and record what's left in `Notes:`. |
 | `done` | The ask is satisfied. |
 | `blocked` | Needs a `Blocked on:` field naming the dependency. Reviewed every planning session. |
 | `deferred` | Parked, no specific dependency. Reviewed only via `/work-review-deferred`. |

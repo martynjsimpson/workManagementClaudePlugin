@@ -8,6 +8,16 @@ the release workflow, tags a GitHub Release.
 
 ## [Unreleased]
 
+### Fixed
+
+- `/work-plan`: `blocked` requests were checked every planning session, but `partially-done`
+  requests had no equivalent — once a request's remaining scope wasn't turned into a new
+  request or work item on the spot, nothing ever came back to it, so it just accumulated
+  silently. Added a dedicated step that checks every `partially-done` request each session,
+  drafts a fresh inbox request for remaining scope that isn't already tracked, and corrects
+  requests misfiled outside `## Refined requests`. Documented the same in `model.md` and
+  `templates/requests.md`.
+
 ## [1.0.0] - 2026-08-10
 
 First stable release. The model (schema `model_version: 3`) and command surface are

@@ -57,7 +57,36 @@ the `Blocked on:` / `blocked_on` field.
 Do not review `deferred` items here. They are surfaced only by
 `/work-review-deferred`.
 
-## Step 3 — Refine intake
+## Step 3 — Check partially-done requests
+
+Read every request with `Status: partially-done`. Unlike `done`, this status is not an
+end state — meaningful scope was deliberately left unfinished, and nothing else in the
+model ever comes back to it. Checking it here is what stops it from silently
+accumulating.
+
+For each:
+
+1. Confirm it is filed under `## Refined requests`. If it is anywhere else (most often
+   `## Done`), move it — that section is where this check looks.
+2. Read its `Notes:` for what remains and whether it names a blocker. If a named blocker
+   has since resolved, say so.
+3. Check whether the remaining scope is already covered — a `needs-refinement`,
+   `refined`, or `in-active-release` request, or a `needs-refinement`/`ready` work item
+   in `backlog.yml`. If so, leave the request as-is; it is being actively tracked, not
+   stalled.
+4. If it is not covered and there is no unresolved blocker, write a new request in
+   `## Inbox / needs refinement` capturing the remaining scope, and reference it from the
+   original request's `Notes:` so the trail stays legible. Step 4 will refine it into
+   work items in this same session.
+5. If it is not covered because it genuinely needs a human decision first (not just
+   because nobody has drafted it yet), leave it `partially-done` and ask the specific
+   question rather than guessing.
+
+Report what you found: how many partially-done requests exist, how many got a new
+inbox request drafted, how many were already covered, and any misfiled entries you
+corrected.
+
+## Step 4 — Refine intake
 
 Take every request with `Status: inbox` or `needs-refinement`. For each:
 
@@ -85,7 +114,7 @@ Where a request genuinely needs a human decision before it can be refined, leave
 `needs-refinement` and ask the specific question. Do not guess at product intent to keep
 the queue moving.
 
-## Step 4 — Propose release scope
+## Step 5 — Propose release scope
 
 Select from work items with status `ready`, `needs-audit`, or `shippable-candidate`.
 

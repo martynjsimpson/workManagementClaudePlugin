@@ -84,7 +84,7 @@ Do not invent additional fields. Do not use sub-headings inside a request block.
 | `needs-refinement` | Reviewed, but needs clarification, splitting, or human input before reliable work items exist. |
 | `refined` | One or more work items exist, but none are currently selected for delivery. |
 | `in-active-release` | One or more derived work items are selected in `active-release.md`. |
-| `partially-done` | Some of the outcome has shipped, but meaningful scope remains. |
+| `partially-done` | Some of the outcome has shipped, but meaningful scope remains. Reviewed every planning session — see below. |
 | `done` | The intended outcome is satisfied. |
 | `blocked` | Cannot proceed until a named dependency resolves. **Must** carry `Blocked on:`. Reviewed every planning session. |
 | `deferred` | Valid but deliberately parked with no specific dependency. **Not** surfaced automatically; reviewed only on request. |
@@ -93,6 +93,13 @@ Do not invent additional fields. Do not use sub-headings inside a request block.
 
 `blocked` and `deferred` are not interchangeable. If there is a specific thing that has
 to happen first, it is `blocked`, and the thing must be named.
+
+A `partially-done` request must record what remains in `Notes:` — otherwise the
+remaining scope has nowhere to live and gets lost. `/work-plan` checks every
+`partially-done` request each session and drafts a fresh `## Inbox / needs refinement`
+request for the remaining scope once it is not already covered by an existing request
+or work item; nothing else revisits it. A `partially-done` request belongs in `##
+Refined requests` — filing it under `## Done` hides it from that check.
 
 ## Work items
 
