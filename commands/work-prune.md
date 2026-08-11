@@ -48,6 +48,17 @@ A work item may be pruned only when all of these hold:
 `needs-audit`, `needs-refinement`, `ready`, `in-progress`, `needs-test`, or
 `in-active-release`.
 
+**A `SPIKE: <ITEM-ID>` completion value is not a version.** Do not compare it to the cutoff
+and do not treat it as failing the cutoff test — a spike bumps no version, so it has no age
+to measure. An item carrying one is a candidate on the strength of the Step 3 document check
+below, subject to the same dependency and referential rules as anything else. An item
+carrying both a spike marker and one or more versions is age-gated on the versions alone.
+
+Where a completion value is neither a version nor a `SPIKE:` marker — legacy free text like
+`spike completed 2026-08-03 (no release/code change)` — do not prune the item and do not
+attempt to interpret the prose. List it for the human to correct, naming the form it should
+take.
+
 ## Step 3 — Verify the durable record before removing anything
 
 For each candidate, confirm its outcome is actually represented in `<paths.changelog>` (or,
@@ -57,6 +68,16 @@ not by itself evidence that the changelog was updated.
 
 Where a candidate has no changelog representation, do not prune it. List it separately as a
 changelog gap for the human to fix first.
+
+**For a candidate carrying `SPIKE: <ITEM-ID>`, the durable record is the spike document, not
+the changelog.** Check that `<paths.spikes>/<ITEM-ID>.md` exists and has both a `## Findings`
+and a `## Recommendations` section populated; that is the same verification, pointed at the
+right record. If it is missing or thin, do not prune — the investigation's output is the only
+thing the item produced.
+
+Never report a spike-completed item as a changelog gap. A spike ships no code and bumps no
+version, so it correctly has no changelog entry, and asking the human to write one sends them
+to add a record that should not exist.
 
 Also check referential integrity: if a pruned work item is referenced by a retained
 request's `Work items:` line, or vice versa, either prune both or neither. Do not leave
@@ -80,7 +101,10 @@ Report the line counts before and after.
 
 ## Constraints
 
-- Never remove an item whose delivery is not represented in the durable record.
+- Never remove an item whose delivery is not represented in the durable record — the
+  changelog or tags for a version, the spike document for a `SPIKE:` marker.
+- Never report a spike-completed item as a changelog gap, and never interpret a legacy
+  free-text completion value as though it were a version.
 - Never remove an item with remaining work, whatever its status says.
 - Never prune at all when `<vcs.system>` is `none` and `<paths.changelog>` is null.
 - Do not touch `<paths.work>/active-release.md` or `<paths.work>/project.yml`.

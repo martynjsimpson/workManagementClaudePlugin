@@ -101,6 +101,7 @@ code file with a `TODO` comment, and never anything the manifest points at.
 | `/work-plan` | Closes out a finished release, checks blocked items, refines intake into work items, proposes the next release scope. |
 | `/work-release` | Confirms scope, briefs and runs the required agents, verifies against acceptance criteria, then ships or hands off per the manifest. |
 | `/work-spike` | Runs investigation-only items, producing one Findings/Recommendations document each. Refuses to run non-spike work. |
+| `/work-crunch` | Loops plan → deliver → close out until the backlog empties or a guardrail stops it. Asks for its permissions once up front. Needs `vcs.owner: command` and a changelog. |
 | `/work-review-deferred` | Re-triages parked items — keep, block, promote, or reject. The only thing that surfaces deferred work. |
 | `/work-prune` | Trims completed items whose delivery is already in the changelog or tags. |
 | `/work-init` | Sets a project up. `--dry-run` writes nothing; `--repair`/`--upgrade` (same flag) regenerates agents after a manifest change, upgrading a stale manifest first if the schema has moved. |
@@ -169,6 +170,26 @@ bumped the version, so restoring the previous value is part of the abandonment n
 optional tidying. Under `vcs.system: none` there is no diff to consult, so the previous value is
 recorded in the Step 2 report and carried verbatim into the note.
 
+**`/work-crunch` drives the other commands, it does not reimplement them.** It reads
+`work-plan.md`, `work-release.md` and `work-spike.md` and follows them as written, so there is
+one copy of the release logic rather than two that drift. What it adds is a permissions
+contract asked once up front, and stop conditions checked after every cycle — a budget, an
+exhausted backlog, a failed verification, or no measurable progress.
+
+Three of its rules are not configurable. It never guesses a product decision to keep the loop
+moving — a question with no human to answer it stays parked as a `needs-refinement` request,
+because a backlog of invented intent is worse than a short run. It never auto-bumps a major
+version, since that is a promise to the project's users rather than an inference from a
+`type:` field. And it never abandons a release: on a failed verification it stops and leaves
+everything exactly as it stands, because abandonment means reverting code *and* restoring the
+version, and an unattended agent undoing a working tree is the one action worth ruling out
+entirely.
+
+It requires `vcs.owner: command` — the branch gate is the human owning the repository, and no
+run-scoped override can borrow that — and a required changelog, since that is the only durable
+narrative of what a multi-release run shipped. Under `vcs.branching: pr` it caps itself at one
+release, because the merge is yours to time.
+
 **The schema is versioned, and the gate is real.** `model_version` is the schema contract. Every
 command checks it before reading anything else and stops on a mismatch, pointing at
 `/work-init --upgrade`. Nothing auto-migrates — rewriting the manifest as a side effect of a
@@ -218,8 +239,8 @@ something true of one project only, that is the drift this plugin exists to prev
 work-management/
   .claude-plugin/plugin.json
   commands/                 work-init, work-migrate, work-ingest, work-plan,
-                            work-release, work-spike, work-review-deferred,
-                            work-prune
+                            work-release, work-spike, work-crunch,
+                            work-review-deferred, work-prune
   skills/
     work-capture/SKILL.md
     work-model/SKILL.md

@@ -74,6 +74,9 @@ touched by hand, verify:
 - **Field names** — requests use `Work items:` (not `Derived work items:`).
 - **Paired fields** — `blocked` carries `Blocked on:` / `blocked_on`; `deferred` does
   not; `done` and `partially-done` carry `Done in:` / `done_in`.
+- **Completion values** — every entry in `Done in:` / `done_in` is a release version or
+  `SPIKE: <ITEM-ID>`. Free text such as a bare date is drift: a spike bumps no version, so
+  it records the marker instead.
 - **Referential integrity** — every ID in `Work items:` exists in `backlog.yml`; every
   `source_request` exists in `requests.md`; every name in `suggested_agents` exists in
   `<agents>` and not in `<inactive_agents>`; every `dependencies` entry resolves.
@@ -110,6 +113,7 @@ current schema before regenerating agents — it runs the `/work-migrate` proced
 also stays callable on its own when you want that edit reviewed separately. `/work-ingest`
 backfills intake from a PRD or other existing material. `/work-plan`
 refines and proposes scope. `/work-release` delivers. `/work-spike` runs investigations.
+`/work-crunch` runs those three on a loop under a permissions contract agreed up front.
 `/work-review-deferred` re-triages parked items. `/work-prune` trims completed history. The
 `work-capture` skill handles quick intake.
 

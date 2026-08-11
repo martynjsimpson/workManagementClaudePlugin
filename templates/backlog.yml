@@ -14,6 +14,11 @@
 #   deferred MUST NOT carry blocked_on — if there is a dependency, it is blocked.
 #   done     carries done_in; completion is never encoded in the status value.
 #
+#   done_in holds release versions. A spike bumps no version, so a completed spike
+#   records SPIKE: <ITEM-ID> instead — never a date and never free text, since this
+#   field is parsed as a version everywhere else. The document is derived from the ID
+#   as {{SPIKES_PATH}}/<ITEM-ID>.md rather than stored, so it survives that path moving.
+#
 # Fields: id, source_request, title, type, capability, status, priority, confidence,
 # summary, acceptance, remaining, dependencies, suggested_agents, evidence, done_in,
 # blocked_on. Full schema and field-by-field semantics: work-model skill.

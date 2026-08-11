@@ -22,6 +22,7 @@ the local operating guide; the model is portable and identical across projects.
 | `/work-plan` | Closes out a finished release, checks blocked items, refines intake, proposes the next scope. |
 | `/work-release` | Confirms scope, briefs and runs the agents, verifies, then ships or hands off. |
 | `/work-spike` | Runs investigation-only items, producing one Findings/Recommendations document each. |
+| `/work-crunch` | Loops plan → deliver → close out until the backlog empties or a guardrail stops it. Asks for its permissions once up front. |
 | `/work-review-deferred` | Re-triages parked items — the only thing that surfaces them. |
 | `/work-prune` | Trims completed items whose delivery is already durably recorded. |
 | `/work-init --repair` / `--upgrade` | Regenerates the agent roster after a manifest change, upgrading a stale manifest first if the plugin's schema has moved. |

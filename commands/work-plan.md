@@ -31,6 +31,17 @@ If its status is `ready-for-release` or `released`, close it out before refining
    human-facing ask is fully satisfied; use `partially-done` when meaningful scope
    remains, and add a `Remaining:` note saying what. Add `Done in:` in both cases. Move
    the request to the correct H2 section.
+
+   **For a `type: spike` work item, the completion value is `SPIKE: <ITEM-ID>` — never a
+   version, never a date, never free text.** A spike bumps no version, so there is no
+   number to record; anything improvised here lands in a field every other item parses as
+   a version. Use the item's own ID: the document is at `<paths.spikes>/<ITEM-ID>.md` by
+   construction, so the path is derived when needed rather than stored. This applies to
+   both `done_in` and `Done in:`.
+
+   Where you are closing out an item whose existing completion value is legacy prose
+   describing a spike, correct it to this form as you go. Do not sweep the rest of the
+   file for others — report that you saw them, and leave them for `/work-prune`.
 3. Reset `<paths.work>/active-release.md` to `Status: none`, `Version: TBD`, with no
    selected work items.
 4. Process any `## Deferred items for PM` block: turn each entry into a request in

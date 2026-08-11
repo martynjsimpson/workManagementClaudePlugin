@@ -8,6 +8,66 @@ the release workflow, tags a GitHub Release.
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-08-11
+
+### Added
+
+- `/work-crunch` — runs plan → deliver → close out on a loop, so a backlog can be worked
+  through in one sitting instead of one command at a time. It drives the existing commands
+  rather than reimplementing them: each cycle reads `work-plan.md` and then either
+  `work-release.md` or `work-spike.md` and follows it as written, so there is no second copy
+  of the release logic to drift. Both delivery paths end at `ready-for-release`, so closeout
+  is identical either way.
+
+  Permissions are asked once up front — release budget, scope auto-approval, release size,
+  version bump rule, manual-verification pause, spike confirmation, and a run-scoped
+  `version.owner` override where the manifest reserves numbering for the human. Those answers
+  are scoped to the run and never written to `project.yml`.
+
+  It refuses to run where an unattended loop cannot be safe: `vcs.owner: human` stops at
+  `/work-release`'s branch gate by design, and a run without a required changelog leaves no
+  durable record of what it shipped. Under `vcs.branching: pr` it caps itself at one release,
+  since the merge is the human's to time. A null `testing.policy_document` combined with no
+  manual verification is a hard warning requiring explicit confirmation.
+
+  Stop conditions are checked after every cycle: budget reached, backlog exhausted,
+  verification failed, no measurable progress (the shippable work-item ID set unchanged, or a
+  proposal repeating the previous cycle's items), a major version bump, or an architect
+  trigger with no architect on the project. On failure it stops and leaves the release exactly
+  as it stands — it never marks a release `abandoned`, reverts code, or restores a version.
+  It never guesses a product decision either; a question with no human to answer it stays
+  parked as a `needs-refinement` request and is surfaced in the final report.
+
+  Spike work is a first-class path through the loop, not an exclusion. Because `/work-release`
+  refuses a release containing spikes and `/work-spike` refuses one containing anything else,
+  a mixed proposal would deadlock the loop from both sides — so planning selects all-spike or
+  all-code scope for a given cycle, never both.
+
+  The run is resumable: an interrupted crunch is re-entered by running the command again,
+  which resolves its entry point from `active-release.md`. An `in-progress` or `testing`
+  release found on entry stops and asks rather than resuming blind, since which agents
+  completed is unknowable from the file.
+
+### Fixed
+
+- Completion of a spike had no defined value for `Done in:` / `done_in`. The field is
+  specified as a release version, and a spike bumps none — so agents improvised prose like
+  `spike completed 2026-08-03 (no release/code change)` into a field every other item parses
+  as a version. Spike completion is now recorded as `SPIKE: <ITEM-ID>`: a fixed, comparable
+  form that points at the work item whose document is the actual deliverable. The ID is
+  stored rather than the path, since `<paths.spikes>/<ITEM-ID>.md` is derivable and a stored
+  path goes stale the first time that setting moves. A `done_in` may hold both forms — a
+  request satisfied by an investigation and then an implementation carries a spike marker
+  alongside a version.
+
+  This also fixes a false positive in `/work-prune`. Its Step 3 verifies each candidate
+  appears in the changelog before removing it, so every spike-completed item was reported as
+  a changelog gap, sending the human to add an entry that must not exist. Prune now checks
+  the right durable record for a `SPIKE:` marker — that the spike document exists with both
+  required sections — and never age-gates a marker against the version cutoff, since it has
+  no version to compare. Legacy free-text values are listed for correction rather than
+  interpreted; `/work-plan` rewrites them to the current form as it closes items out.
+
 ## [1.0.1] - 2026-08-11
 
 ### Fixed

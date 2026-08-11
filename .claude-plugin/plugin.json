@@ -1,6 +1,6 @@
 {
   "name": "work-management",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "Project-agnostic Request -> Work item -> Active release -> Done delivery model for AI-supported development. Commands resolve all project facts from a single docs/work/project.yml manifest, so the same engine drives any repository.",
   "author": {
     "name": "Martyn Simpson",

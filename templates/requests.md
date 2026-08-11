@@ -35,7 +35,7 @@ Summary: <one or more sentences describing the ask>
 Notes: <optional>
 Work items: <backlog item IDs once they exist>
 Source: <where the request came from>
-Done in: <version — only when done or partially-done>
+Done in: <version, or SPIKE: <ITEM-ID> — only when done or partially-done>
 Blocked on: <named dependency — only when blocked>
 ```
 

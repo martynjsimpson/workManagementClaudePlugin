@@ -70,7 +70,7 @@ Summary: <one or more sentences describing the ask>
 Notes: <optional — only when there is something worth noting>
 Work items: <backlog item IDs once they exist>
 Source: <where it came from, e.g. "human request (direct)">
-Done in: <release version — only when status is done or partially-done>
+Done in: <release version, or SPIKE: <ITEM-ID> — only when status is done or partially-done>
 Blocked on: <named dependency — only when status is blocked>
 ```
 
@@ -125,7 +125,7 @@ The file begins with `model_version: 1` and contains an `items:` list.
   dependencies: []                       # work item IDs
   suggested_agents: []                   # names from manifest agents[]
   evidence: reference to the spec section, file, or note justifying this item
-  done_in: []                            # only when status is done
+  done_in: []                            # only when status is done — versions, or SPIKE: <ITEM-ID>
   blocked_on: ...                        # only when status is blocked
 ```
 
@@ -168,6 +168,21 @@ explored and documented before work items can be written.
 
 **Done for a spike** means that document exists with both sections populated. No code
 ships. No version is bumped. No test coverage is expected.
+
+**Completion is recorded as `SPIKE: <ITEM-ID>`**, in the work item's `done_in` and in the
+`Done in:` of any request it completes — never a version, and never free text. A spike bumps
+no version, so there is no number to record; without a fixed form, what lands in a field
+every other item parses as a version is improvised prose like
+`spike completed 2026-08-03 (no release/code change)`, which is neither comparable to a
+cutoff nor a pointer to anything.
+
+The ID is the whole value. The document is at `<paths.spikes>/<ITEM-ID>.md` by construction,
+so the path is derived when needed rather than stored — a stored path goes stale the first
+time `<paths.spikes>` moves, whereas the ID stays true.
+
+A `done_in` therefore holds versions or spike markers, and may hold both: a request satisfied
+by an investigation and then an implementation legitimately carries
+`SPIKE: <ITEM-ID>` alongside a version.
 
 **Ownership exception.** Whichever agent is assigned a spike may write its document, even
 where `<paths.spikes>` sits in another agent's `owns` list. Spike output is a defined
@@ -257,6 +272,13 @@ pruned. Prune when:
 - a request has `Status: done` and all `Done in:` versions are older than the cutoff;
 - a work item has `status: done` and all `done_in` versions are older than the cutoff;
 - the item has no unresolved remaining work.
+
+**A `SPIKE: <ITEM-ID>` marker is not a version and is not age-gated.** There is no number to
+compare against a cutoff, and the durable record is the spike document rather than the
+changelog. An item completed by spike is prunable once that document exists at
+`<paths.spikes>/<ITEM-ID>.md` with both required sections — subject to the same dependency
+and referential checks as anything else. Do not report its missing changelog entry as a gap:
+a spike correctly has none.
 
 Never prune `partially-done`, `deferred`, `blocked`, `needs-audit`,
 `needs-refinement`, `ready`, or `in-active-release` items.
