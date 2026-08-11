@@ -238,6 +238,20 @@ work-management/
 
 See [CHANGELOG.md](CHANGELOG.md).
 
+## Releasing
+
+Pushing a `.claude-plugin/plugin.json` version bump to `main` triggers
+[`.github/workflows/release.yml`](.github/workflows/release.yml), which tags `v<version>` and
+creates a GitHub Release from `CHANGELOG.md`. Do both edits in the same commit, in this order:
+
+1. In `CHANGELOG.md`, rename `## [Unreleased]` to `## [<version>] - <date>` and add a fresh
+   empty `## [Unreleased]` above it for whatever lands next.
+2. Bump `version` in `.claude-plugin/plugin.json` to match.
+
+If the version header and the `plugin.json` version don't match, the release notes silently
+fall back to "See CHANGELOG.md." instead of the real entry — so bump both together, never one
+without the other.
+
 ## License
 
 MIT. See [LICENSE](LICENSE).

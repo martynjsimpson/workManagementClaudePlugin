@@ -8,6 +8,8 @@ the release workflow, tags a GitHub Release.
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-08-11
+
 ### Fixed
 
 - `/work-plan`: `blocked` requests were checked every planning session, but `partially-done`
