@@ -142,9 +142,15 @@ Cap the proposal at the release size from the contract.
 ### 4b — Approve
 
 If the contract says pause, present the proposal and wait. If it says auto-approve, state
-what you are approving and why it satisfies the contract, then proceed. Record the approval
-either way — `/work-release` Step 1 requires explicit approval to exist, and under
-auto-approval the contract is that approval.
+what you are approving and why it satisfies the contract, then proceed. `/work-release`
+Step 1 requires explicit approval to exist, and under auto-approval the contract is that
+approval.
+
+**Record it by setting `Status: approved` in `active-release.md` before the delivery step
+runs.** Neither delivery command writes that value — `/work-release` Step 1 is explicitly
+barred from it by the branch gate — so if you leave it at `proposed`, an interrupted run
+re-enters at Step 3 with no record that this scope was ever agreed, and asks for an
+approval the contract already gave.
 
 ### 4c — Deliver
 
@@ -164,8 +170,14 @@ Everything else in those files runs exactly as written.
 
 ### 4d — Close out
 
-Run `/work-plan`'s closeout on the finished release. Both delivery paths end at
-`Status: ready-for-release`, so this step is identical either way.
+Both delivery paths end at `Status: ready-for-release`, so this step is identical either
+way. **Read `active-release.md` and confirm it actually says so before closing out.** If it
+still reads `approved` or `in-progress`, the delivery step did not complete its wrap-up:
+`/work-plan`'s closeout keys off that line alone, so running it now would refine and
+propose straight over a release whose work items were never marked `done` in `backlog.yml`
+and whose requests were never updated. Stop the run and report which command left it there.
+
+Then run `/work-plan`'s closeout on the finished release.
 
 Then evaluate Step 5 before starting another cycle.
 

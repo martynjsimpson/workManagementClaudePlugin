@@ -165,6 +165,15 @@ Update every request whose work items you selected to `in-active-release`.
 
 Present the proposal to the human for approval. Do not treat writing the file as approval.
 
+**If they approve in this session, set `Status: approved` before you finish.** Approval is
+the only status transition with no other owner: `/work-release` cannot record it, because
+its branch gate forbids writing `active-release.md` until the release branch exists, and by
+then the status is moving to `in-progress` anyway. So an approval given here and not
+written here is lost, and the release is still sitting at `proposed` when the next session
+opens it — which reads as scope nobody has agreed to. If the session ends without a
+decision, leave it `proposed`; that is the honest state, and both `/work-release` and
+`/work-crunch` handle it.
+
 In that report — **in the chat, not in the file** — account for the candidates you did not
 select: which `ready` items you passed over and why, what you refined this session that is
 not in the release, and which items are spikes and so cannot mix into a `/work-release`

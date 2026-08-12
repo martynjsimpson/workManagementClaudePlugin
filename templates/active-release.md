@@ -11,6 +11,12 @@ work not being built now belongs in backlog.yml.
 Status values: none, proposed, approved, in-progress, testing, ready-for-release, released,
 abandoned (requires an "## Abandonment note"), cancelled. Full meanings: work-model skill.
 
+The Status line above is this release's external interface — the only signal outside the
+running session of where it has got to. Both delivery commands move it as they go: a code
+release runs approved -> in-progress -> testing -> ready-for-release, a spike release runs
+approved -> in-progress -> ready-for-release. Work item statuses below it are not a
+substitute; closeout reads the top-level line alone.
+
 Version and branch handling — assignment timing, the version-before-branch-name ordering,
 and the Branch: line recorded beside Version: above — are specified in /work-release Steps
 2 through 2b. This file only ever records the outcome; it never decides it.

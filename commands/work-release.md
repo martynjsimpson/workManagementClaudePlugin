@@ -40,7 +40,14 @@ Present a scope summary: selected items, required agents, the verification bar f
 item, the release type implied by the work, and any decision or blocker already recorded.
 
 **Wait for explicit human approval before spawning any agent.** Approving the plan is not
-the same as the PM having written it.
+the same as the PM having written it. A release arriving here at `Status: approved` was
+approved in an earlier session and needs no second approval — but one at `proposed` does,
+whatever else the file says.
+
+**Do not write `Status: approved` yourself.** The branch gate below forbids touching
+`active-release.md` until the release branch exists, and by that point the status is moving
+to `in-progress`. Approval given in this session is recorded by your proceeding past this
+step, not by a write.
 
 ## Step 2 — Assign the version and name the branch. Write nothing.
 
