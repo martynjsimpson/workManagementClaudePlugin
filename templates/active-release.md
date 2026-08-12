@@ -32,7 +32,9 @@ Section skeleton for a proposed release:
   What is still open, and who resolves it.
 
   ## Out of scope
-  What a reasonable reader might assume is included but is not.
+  Boundaries within this release's own theme — what a reasonable reader might
+  assume is included but is not. Not a list of backlog items that were considered
+  and not selected; that is backlog.yml's job. 0-3 bullets, or "None."
 
   ## Required agents
   Names from project.yml agents[], each with what it is needed for.

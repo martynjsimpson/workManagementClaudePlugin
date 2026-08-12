@@ -6,9 +6,21 @@ to `version` in [`.claude-plugin/plugin.json`](.claude-plugin/plugin.json) —
 bumping that field is what ships a new version to installed users and, via
 the release workflow, tags a GitHub Release.
 
-## [Unreleased]
+## [1.2.0] - 2026-08-12
 
 ### Changed
+
+- `/work-plan` no longer turns a release's "Out of scope" section into a second backlog. The
+  section was defined in one line — "what a reasonable reader might assume is included but is
+  not" — with no admission test and nowhere else for the PM to put its reasoning about the
+  candidates it passed over, so in practice it filled up with every unselected `ready` item and
+  its rationale. That duplicated `backlog.yml`, went stale as soon as it was written, and was
+  read on every cycle by `/work-release`, `/work-spike` and `/work-crunch` as part of the
+  implementer briefing. The definition now carries an explicit admission test, a prohibition on
+  listing unselected backlog items, and a size expectation ("None." is a correct answer), in
+  both the command and the `active-release.md` template. The reasoning that was landing there
+  now has a home: Step 5's proposal report covers what else was ready and why it was not
+  chosen, in the chat rather than in the file.
 
 - Documentation only, no behaviour change. The README now opens with the model itself — the
   flow, the four work files, and the three status planes — before install and setup, and the

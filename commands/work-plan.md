@@ -141,7 +141,15 @@ Write `<paths.work>/active-release.md` containing:
 - **Decisions** — every choice you made during refinement that constrains
   implementation, stated as a decision, not as a discussion.
 - **Decisions needed** — anything still open, and who must resolve it.
-- **Out of scope** — what a reasonable reader might assume is included but is not.
+- **Out of scope** — boundaries *within this release's own theme*: what a reasonable
+  reader might assume is included but is not. Admission test: reading only the release
+  goal and the selected items, could someone reasonably start building this? If not, it
+  does not belong here. **Never list backlog items that were considered and not selected**
+  — that is `backlog.yml`'s job, and repeating it here creates a second backlog that goes
+  stale the moment it is written. Expect 0–3 bullets; `None.` is a normal and correct
+  answer. "This release touches the display layer only; the unused legacy column behind it
+  is not cleaned up" belongs here. "WORK-nnn — unrelated theme, held for a future release"
+  does not, however true it is.
 - **Required agents** — names from `<agents>`, each with what it is needed for. Include
   the architect if any item hits a `consult_before` trigger.
 - **Verification bar** — for each item, what must be true to call it done. Where
@@ -156,6 +164,12 @@ approved, so that the number and the work it covers are confirmed together.
 Update every request whose work items you selected to `in-active-release`.
 
 Present the proposal to the human for approval. Do not treat writing the file as approval.
+
+In that report — **in the chat, not in the file** — account for the candidates you did not
+select: which `ready` items you passed over and why, what you refined this session that is
+not in the release, and which items are spikes and so cannot mix into a `/work-release`
+release. This is where that reasoning belongs. It is a snapshot of one session's thinking,
+useful now and wrong within a cycle, so it must not be persisted into `active-release.md`.
 
 ## Constraints
 
