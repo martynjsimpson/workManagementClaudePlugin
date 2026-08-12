@@ -8,6 +8,15 @@ the release workflow, tags a GitHub Release.
 
 ## [Unreleased]
 
+### Changed
+
+- Documentation only, no behaviour change. The README now opens with the model itself — the
+  flow, the four work files, and the three status planes — before install and setup, and the
+  command table is ordered as you meet the commands (set up, backfill, the delivery loop,
+  then maintenance) rather than arbitrarily. The design rationale that made up roughly a
+  third of the README moved to a new [DESIGN.md](DESIGN.md), linked from the sections that
+  depend on it, so the README stays a reference and the reasoning stays available in full.
+
 ## [1.1.0] - 2026-08-11
 
 ### Added
