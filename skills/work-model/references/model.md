@@ -237,13 +237,22 @@ not a degraded one — but see the consequences for the durable record below.
 |---|---|
 | `none` | No release in flight. |
 | `proposed` | Scope drafted, awaiting human approval. |
-| `approved` | Scope approved, implementation not started. |
-| `in-progress` | Implementation under way. |
-| `testing` | Implementation complete, verification under way. |
+| `approved` | Scope approved, implementation not started. Written by whoever takes the approval — `/work-plan` when the human approves the proposal in that session, `/work-crunch` when its pre-flight contract approves it — never by a delivery command. |
+| `in-progress` | Implementation under way — or, on a spike release, investigation under way. |
+| `testing` | Implementation complete, verification under way. Not used by a spike release, which has no separate verification phase. |
 | `ready-for-release` | Verified, awaiting the release action. |
 | `released` | Shipped, with the version recorded. |
 | `abandoned` | Started but not completed, **and all code changes reverted**. Requires an `## Abandonment note`. |
 | `cancelled` | Scope withdrawn **before implementation started**. No code was written, so nothing needs reverting. |
+
+**The status line is the release's external interface.** It is the only record of where a
+release has got to that survives outside the session running it, and the only thing
+`/work-plan`'s closeout and `/work-crunch`'s entry point read. So every delivery command
+moves it as it goes, and a spike release is no exception: `/work-spike` sets `in-progress`
+before the first spike is assigned and `ready-for-release` once the last document is
+accepted, giving `approved → in-progress → ready-for-release` where a code release gives
+`approved → in-progress → testing → ready-for-release`. Marking individual work items done
+is not a substitute — nothing downstream reads them to infer that the release finished.
 
 The difference between `abandoned` and `cancelled` is whether code was written and
 undone. An abandonment note must state why, what was not delivered, what must happen

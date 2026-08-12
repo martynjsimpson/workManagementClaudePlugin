@@ -26,6 +26,13 @@ all of them or specific ones. Wait for confirmation.
 
 ## Step 2 — Run each spike sequentially
 
+**Set `Status: in-progress` in `<paths.work>/active-release.md` before assigning the first
+spike.** A spike release moves through the same status line as a code release, and this is
+the only signal outside this session that the investigation started: anything watching the
+file — a human, a monitoring tool, or `/work-crunch` resuming an interrupted run — sees a
+release still sitting at `approved` as one where nothing has begun, and treats re-running
+the spikes from the top as safe.
+
 Finish each spike completely before starting the next. Spike findings frequently change
 what the next spike should even ask.
 
@@ -50,11 +57,16 @@ substantive content, and that `## Recommendations` is actionable. If a recommend
 could not be turned into a backlog item as written, send it back. A thin spike document is
 worse than none, because it looks like the question was answered.
 
-**Mark it done** in `<paths.work>/active-release.md`, then move on.
+**Mark it done** in `<paths.work>/active-release.md`, then move on. That is the work item's
+own status line, not the release's — the top-level `Status` stays `in-progress` until Step 3.
 
 ## Step 3 — Wrap up
 
-Set the top-level `Status` in `<paths.work>/active-release.md` to `ready-for-release`.
+**Set the top-level `Status` in `<paths.work>/active-release.md` to `ready-for-release`.**
+Do this first, before reporting anything. It is the step that ends the release: marking
+every work item done leaves the release itself still open, `/work-plan`'s closeout runs on
+the top-level status alone and does nothing without it, and a release stuck at `approved`
+or `in-progress` is one a later session will offer to run again.
 
 Tell the human which documents were produced and where, then: review the Findings and
 Recommendations in each, and run `/work-plan` to process the recommendations into requests
@@ -68,6 +80,10 @@ applies to them as to code.
 
 ## Constraints
 
+- Never leave the release at `approved` once the first spike has been assigned, or at
+  `in-progress` once the last document has been accepted. Both transitions are required
+  even where the session is going to report the outcome in chat anyway — the status line
+  is what anything outside this session reads.
 - Do not write application code. A spike that produces code is not a spike.
 - Do not bump a version or update `<paths.changelog>`.
 - Do not edit `<paths.work>/backlog.yml` or `<paths.work>/requests.md` — `/work-plan`

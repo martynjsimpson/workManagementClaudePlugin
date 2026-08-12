@@ -6,6 +6,43 @@ to `version` in [`.claude-plugin/plugin.json`](.claude-plugin/plugin.json) —
 bumping that field is what ships a new version to installed users and, via
 the release workflow, tags a GitHub Release.
 
+## [1.2.1] - 2026-08-12
+
+### Fixed
+
+- A spike release left `active-release.md` sitting at `Status: approved` for the whole run.
+  `/work-spike` wrote the status exactly once, as a prose line at the top of its wrap-up
+  step, where `/work-release` writes it three times as its own instruction — so the release
+  had no `in-progress` state at all, and its single transition to `ready-for-release` was
+  the most droppable line in the command. Beyond leaving nothing outside the session able
+  to tell a running spike from an idle one, the failure mode was quiet and compounding:
+  `/work-plan`'s closeout keys off the top-level status alone, so at `approved` it skipped
+  closeout entirely and refined-and-proposed straight over the release, leaving the spike's
+  work items un-`done` in `backlog.yml` and their requests without their `SPIKE: <ITEM-ID>`
+  completion value. `/work-crunch` reads `approved` as "run the delivery step", so an
+  interrupted spike release was also a candidate to be run again from the top —
+  `/work-release` gets that protection from its `in-progress` write, and spikes had no
+  equivalent.
+
+  `/work-spike` now sets `in-progress` before the first spike is assigned and
+  `ready-for-release` as the first action of its wrap-up, both as constraints rather than
+  passing mentions, giving `approved → in-progress → ready-for-release` against a code
+  release's `approved → in-progress → testing → ready-for-release`. `/work-crunch` verifies
+  the status actually reads `ready-for-release` before closing out, rather than asserting
+  both delivery paths end there, and stops if a delivery step left it behind. The
+  `work-model` skill and the `active-release.md` template now state that the top-level
+  status is the release's external interface and that per-item statuses are not a
+  substitute for it.
+
+- `Status: approved` had no defined writer. `/work-plan` writes `proposed`, `/work-release`
+  requires approval to exist but cannot record it — its branch gate bars writing
+  `active-release.md` before the release branch exists — and `/work-crunch` said to "record
+  the approval" without saying where. The value was reached by inference, which is fragile
+  for a state `/work-crunch`'s entry table resumes from. `/work-plan` now writes it when the
+  human approves in that session, `/work-crunch` writes it when its contract approves,
+  `/work-release` is explicitly barred from it, and the model documents which command owns
+  the transition.
+
 ## [1.2.0] - 2026-08-12
 
 ### Changed
