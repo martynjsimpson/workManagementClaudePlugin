@@ -115,9 +115,33 @@ changes belonging to other projects in the same repository: read that output rat
 treating any dirt as this release's problem, and scope the check to the manifest's own
 directory where you can.
 
-## Step 2b — Write the version
+## Step 2b — Commit the work files, then write the version
 
 Only now, with the branch confirmed, write anything.
+
+**Commit the work files as they stand, before writing anything new.** Skip this entirely
+when `<vcs.system>` is `none`, and never do it when `<vcs.owner>` is `human` — the handoff
+in Step 7 covers those files instead. Otherwise commit `<paths.work>/active-release.md`,
+`<paths.work>/backlog.yml` and `<paths.work>/requests.md`, naming those paths explicitly and
+committing no others, so that unrelated dirt elsewhere in the repository stays where it is.
+If they are already clean, say so and move on.
+
+They are usually dirty here because `/work-plan` wrote them and planning does no committing
+of its own: the proposal, the refined work items and their request statuses are sitting
+uncommitted, and the branch just cut in Step 2a carried them across. Committing them now
+puts the release's starting position on the record as its own commit, so the version bump
+that follows reads as a version bump rather than arriving buried in a pile of planning
+changes. **Committing these files is not editing them** — the constraint against editing
+`backlog.yml` and `requests.md` stands, and committing the PM's work is not a breach of it.
+
+**From here on, commit these files whenever they change, at the point they change.** Every
+status transition in this command is one such change — `in-progress` below, `testing` in
+Step 6, `ready-for-release` in Step 7 — as is a work item moving to `done` or an entry
+landing under `## Deferred items for PM`. The status line is what anything outside this
+session reads to know where the release has got to, and an uncommitted status line has not
+moved as far as the repository is concerned. Do not batch these into a single tidy-up
+commit at ship time: a release that is interrupted mid-flight should leave its own state
+committed and legible, not resting in a working tree.
 
 Record the confirmed version in `active-release.md` straight away, so it survives the session
 being interrupted, along with the branch name from Step 2a where there is one.
@@ -145,6 +169,22 @@ artefact produced during the release claims the previous version, which is confu
 later and actively misleading if anyone installs a build mid-session.
 
 Set `Status: in-progress`.
+
+**Then commit the version bump immediately, as its own commit.** Under `<vcs.system>` `git`
+with `<vcs.owner>` `command`, commit `<version.file>`, every path in `<version.mirrors>`,
+and `active-release.md` — which now carries the version, the branch and the new status — and
+nothing else. Do this before spawning a single agent, so that no implementer's work can land
+in the same commit.
+
+That commit is the release's anchor. It is the first change on the branch that belongs to
+the release rather than to planning, so it is what a rollback rewinds to and what a bisect
+lands on, and the whole point is defeated if it is mixed in with the work it precedes. It
+also makes the abandonment path cheap: the previous version is one `git revert` away rather
+than a value to be recovered from a session report, which matters because the bump happens
+before the work is verified and an abandoned release must not leave it standing.
+
+Where `<version.file>` is null there is no bump to commit, but commit `active-release.md`
+anyway — the status transition still has to reach the repository.
 
 ## Step 3 — Architect first, if triggered
 
@@ -202,7 +242,9 @@ to triage it as a fresh request, and carry on.
 
 ## Step 6 — Human verification
 
-Set `Status: testing`. Give the human, for each work item, what to do to confirm it works:
+Set `Status: testing` and commit it per Step 2b's rule, before you write the instructions
+below — verification can take a while, and the file should say what is happening throughout
+it rather than afterwards. Give the human, for each work item, what to do to confirm it works:
 where to go, what to interact with, what correct looks like, and which edge case is worth
 a manual check.
 
@@ -216,8 +258,9 @@ When the human raises something:
 
 ## Step 7 — Ship or hand off
 
-Set `Status: ready-for-release` and mark each completed work item `done` in
-`active-release.md`.
+Set `Status: ready-for-release`, mark each completed work item `done` in
+`active-release.md`, and commit that per Step 2b's rule — before the changelog and the tag
+below, so the release is recorded as verified even if the ship steps stop partway.
 
 The version was assigned in Step 2 and written in Step 2b. Do not re-ask for it, and do not
 re-write `<version.file>` unless Step 2b reported it as null. Confirm the value now recorded
@@ -248,8 +291,11 @@ You, as Release Coordinator, perform the release:
 
 1. If `<release.changelog>` is `required`, update `<paths.changelog>` before tagging. Skip
    if `<paths.changelog>` is null and say so.
-2. Finish according to `<vcs.branching>`. Every commit includes the version files written in
-   Step 2b.
+2. Finish according to `<vcs.branching>`. The version files were committed in Step 2b — do
+   not re-write or re-commit them here. Confirm that commit is on the branch you are about
+   to tag or merge, and if it is not, something has gone wrong that must be resolved before
+   shipping: a tag pointing at a tree carrying the previous version is the one outcome the
+   Step 2b ordering exists to prevent.
    - **`none`** — commit to the current branch, tag it, and push the branch and tag together.
    - **`branch`** — commit any final changes on the release branch from Step 2a, then merge it
      into the branch it was cut from (`--no-ff`, so the release stays visible in history), tag
@@ -276,6 +322,11 @@ write no tag, open no pull request. Hand off with an ordered list drawn from
 `<version.scheme>`, `<version.file>`, `<release.changelog>`, `<paths.changelog>`,
 `<vcs.branching>`, and `<release.deploy_steps>`.
 
+Name the work files under `<paths.work>` in that list, alongside the code and the version
+files. `active-release.md`, `backlog.yml` and `requests.md` all carry uncommitted changes —
+from `/work-plan` before this session and from every status transition during it — and
+nothing else in the release will commit them on their behalf.
+
 State the version already written in Step 2b and the branch confirmed in Step 2a, so they
 commit and tag to match what is on disk rather than reconciling a recommendation against it.
 Do not recommend a version bump here — it has already happened.
@@ -294,6 +345,9 @@ Record in the `## Abandonment note`:
 
 - the version that was written, and the previous value it must be restored to;
 - every file it was written to, `<version.file>` and each of `<version.mirrors>`;
+- under `git`, the SHA of the Step 2b version-bump commit — it is a single commit containing
+  the version files and nothing else, so naming it turns the restore into one `git revert`
+  instead of a hand-edit of every path above;
 - the release branch, and whether it was deleted or left in place;
 - whether you restored the version or the human must.
 
@@ -342,6 +396,15 @@ Finish by telling the human that `/work-plan` closes the release out in the plan
   the human owns the repository, and never report a git error as a release problem.
 - Never attempt, or instruct the user to attempt, any VCS action when `<vcs.system>` is
   `none`. Skip those steps silently rather than reporting them as failures or blockers.
+- Never leave a status transition uncommitted when `<vcs.system>` is `git` and
+  `<vcs.owner>` is `command`. The status line is the release's external interface, and an
+  uncommitted one has not moved.
+- Never commit the work files by a repo-wide `git add`. Name `active-release.md`,
+  `backlog.yml` and `requests.md` by path — a monorepo holds other projects' changes, and
+  they are not this release's to sweep up. The same holds for the version files.
+- Never let the Step 2b version bump share a commit with implementation work, and never
+  defer it until ship time. It is the release's rollback anchor, which requires it to be
+  both isolated and first.
 - Never assign a version when `<version.owner>` is `human` — ask, in Step 2.
 - Never write the version in Step 2. Step 2 reports; Step 2b writes.
 - Never defer the version write to ship time when `<version.file>` is set. Writing it in
