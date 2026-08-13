@@ -211,8 +211,9 @@ surfaces this as a human decision; a crunch cannot take it.
 ### On failure, stop — never abandon
 
 Where a cycle fails verification, leave `active-release.md` exactly as it stands, at
-`in-progress` or `testing`, with the version already written by Step 2b. Report precisely
-what failed and where it stopped.
+`in-progress` or `testing`, with the version already written and committed by Step 2b.
+Report precisely what failed and where it stopped, and name that commit — it is the version
+bump on its own, so it is what a human undoing this release reverts first.
 
 **Do not mark the release `abandoned`, and do not revert anything.** An abandonment means
 reverting code *and* restoring the version in `<version.file>` and every path in

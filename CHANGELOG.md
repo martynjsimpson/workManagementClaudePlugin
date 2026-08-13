@@ -6,6 +6,36 @@ to `version` in [`.claude-plugin/plugin.json`](.claude-plugin/plugin.json) —
 bumping that field is what ships a new version to installed users and, via
 the release workflow, tags a GitHub Release.
 
+## [1.2.2] - 2026-08-13
+
+### Fixed
+
+- The work files were never committed by a release. `/work-release` committed code and
+  version files and left `active-release.md`, `backlog.yml` and `requests.md` in the working
+  tree — including the planning state `/work-plan` had written before the session, which the
+  release branch simply carried across uncommitted. So a status line could move correctly on
+  disk and still never move for anything reading the repository, and an interrupted release
+  left its own state in a working tree rather than on the branch. `/work-release` Step 2b now
+  commits those three files immediately after the branch gate and before the version bump, so
+  the release's starting position is its own commit and the bump reads as a bump; every status
+  transition after it is committed as it happens rather than batched into a tidy-up at ship
+  time. `/work-spike` does the same for its transitions alongside the spike documents. Both
+  name the paths explicitly rather than sweeping the tree, so a monorepo's unrelated changes
+  stay put; both do nothing where `<vcs.system>` is `none`; and where `<vcs.owner>` is `human`
+  the work files are now named in the handoff, which previously listed only code, version
+  files and the changelog.
+
+- The version bump was not committed when it was made. Step 2b wrote `<version.file>` and its
+  mirrors before any agent was spawned — deliberately, so everything built in the session
+  carries the shipping number — but the commit came at ship time, by which point the bump was
+  mixed into whatever the implementers had produced. It now commits immediately and on its
+  own, before the first agent is spawned, making it the first release-owned commit on the
+  branch: the anchor a rollback rewinds to, the commit a bisect lands on, and a single
+  `git revert` for an abandoned release rather than a hand-restore of every versioned path
+  from a value buried in a session report. The abandonment note now records that commit's
+  SHA, Step 7 confirms it is on the branch being tagged rather than re-committing the files,
+  and `/work-crunch` names it when it stops a failed cycle.
+
 ## [1.2.1] - 2026-08-12
 
 ### Fixed

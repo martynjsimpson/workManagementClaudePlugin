@@ -31,7 +31,8 @@ spike.** A spike release moves through the same status line as a code release, a
 the only signal outside this session that the investigation started: anything watching the
 file — a human, a monitoring tool, or `/work-crunch` resuming an interrupted run — sees a
 release still sitting at `approved` as one where nothing has begun, and treats re-running
-the spikes from the top as safe.
+the spikes from the top as safe. Commit that change where `<vcs.system>` is `git` and
+`<vcs.owner>` is `command`, per Step 3.
 
 Finish each spike completely before starting the next. Spike findings frequently change
 what the next spike should even ask.
@@ -74,9 +75,16 @@ and backlog items.
 
 Handle the spike documents per `<vcs>`. When `<vcs.system>` is `none`, there is nothing to
 commit — just name the files written. When it is `git` and `<vcs.owner>` is `human`, note
-that the documents are uncommitted files for them to commit as normal. When `<vcs.owner>`
-is `command`, commit them: spike documents are the deliverable, and the same ownership rule
-applies to them as to code.
+that the documents are uncommitted files for them to commit as normal, along with
+`<paths.work>/active-release.md`. When `<vcs.owner>` is `command`, commit them: spike
+documents are the deliverable, and the same ownership rule applies to them as to code.
+
+Where you commit, commit `active-release.md` too, and commit each status transition as it
+happens rather than only here — `in-progress` in Step 2, `ready-for-release` above. An
+uncommitted status line has not moved as far as the repository is concerned, and a spike
+release is the case most likely to be read from outside the session, because there is no
+version bump or tag to signal it instead. Name the paths explicitly; never sweep the tree
+with a repo-wide `git add`.
 
 ## Constraints
 

@@ -218,7 +218,10 @@ writes `Version: TBD`; `/work-release` confirms the number immediately after sco
 writes it to `<version.file>` and `<version.mirrors>` before any implementation begins, so
 everything built during the session carries the number it will ship as. The consequence is that
 an abandoned release has already bumped the version, and restoring it is part of the
-abandonment rather than optional tidying.
+abandonment rather than optional tidying. Under `git` with `<vcs.owner>` `command` the bump
+is committed on its own, immediately and before any agent is spawned, so it is the first
+release-owned commit on the branch: the anchor a rollback rewinds to, and a single revert
+rather than a hand-restore of every versioned path.
 
 **The release coordinator is a persona, not an agent.** It is the role `/work-release`
 adopts for the duration of a release session. There is no `release-manager` or
@@ -253,6 +256,14 @@ before the first spike is assigned and `ready-for-release` once the last documen
 accepted, giving `approved → in-progress → ready-for-release` where a code release gives
 `approved → in-progress → testing → ready-for-release`. Marking individual work items done
 is not a substitute — nothing downstream reads them to infer that the release finished.
+
+Where `<vcs.system>` is `git` and `<vcs.owner>` is `command`, that interface extends to the
+repository: the delivery command commits `active-release.md`, `backlog.yml` and
+`requests.md` as they change, starting with a commit of the planning state once the release
+branch exists and continuing through each status transition. An uncommitted status line has
+not moved for anything reading the repository rather than the working tree. Where
+`<vcs.owner>` is `human`, the command commits nothing and names those files in its handoff
+instead.
 
 The difference between `abandoned` and `cancelled` is whether code was written and
 undone. An abandonment note must state why, what was not delivered, what must happen
