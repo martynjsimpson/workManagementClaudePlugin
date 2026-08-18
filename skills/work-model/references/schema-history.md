@@ -1,6 +1,6 @@
 # Manifest schema history
 
-The current schema is **`model_version: 3`**. A plugin refuses to act on any other value; see
+The current schema is **`model_version: 4`**. A plugin refuses to act on any other value; see
 `config-resolution.md`.
 
 ## The honest caveat
@@ -17,7 +17,22 @@ reliable and detection is a belt-and-braces cross-check rather than the primary 
 
 Each era lists the keys that identify it. Detect by testing for the newest tells first.
 
-### Era D — `model_version: 3` (plugin 0.6+) — current
+### Era E — `model_version: 4` (plugin 1.3+) — current
+
+- top-level `scope:` block with `root`, `writes_outside`, `agents_dir`
+- `version:` block carries `tag_template` alongside `scheme`, `owner`, `file`, `mirrors`
+- everything era D had, unchanged
+
+**What changed in meaning, not just in shape:** every path field is now relative to the
+**project root** rather than the repository root, with a leading slash escaping to the VCS
+root. On a manifest whose `scope.root` is null those are the same directory, so **no existing
+path needs rewriting** — which is what makes D → E an additive migration rather than a
+rewrite.
+
+### Era D — `model_version: 3` (plugin 0.6–1.2)
+
+**Tells:** top-level `version:` block present but **no** `tag_template` inside it; **no**
+top-level `scope:` block.
 
 - top-level `version:` block with `scheme`, `owner`, `file`, `mirrors`
 - `vcs:` with `system`, `owner`, `branching`
@@ -25,21 +40,39 @@ Each era lists the keys that identify it. Detect by testing for the newest tells
 - `testing:` with `policy_document`, `agent`
 - every entry in `agents:` has `excludes`
 
+**To reach E:**
+
+- add `scope:` with `root: null`, `writes_outside: []`, `agents_dir: project`. `root: null`
+  preserves era D behaviour exactly, so this is the safe default and the only one that needs
+  no thought on an ordinary single-project repository.
+- add `version.tag_template: null` — likewise the historical behaviour.
+- **Ask before defaulting `scope.root`, but only where the evidence warrants it.** If the
+  manifest sits somewhere other than the repository root — the `.git` directory is above
+  `<paths.work>`'s parent — this is a monorepo member that has been managed as though it
+  were a whole repository, and its paths are almost certainly carrying an `apps/toolA/`
+  prefix that should now be stripped. Say what you found, propose `scope.root` and the
+  prefix-stripping as one change, and let the human confirm. Do not perform it silently: a
+  path rewrite based on a wrong guess about the root breaks every ownership table at once.
+- **Recommend a `tag_template` whenever `scope.root` ends up non-null**, and say why in one
+  line: a bare `v1.2.3` is a repository-global name that the next member to reach that version
+  cannot also claim.
+
 ### Era C — declared `2`, actually plugin 0.4–0.5
 
 **Tells:** `release.version_mirrors` present; `excludes` present on agents; no top-level
 `version:`.
 
-**To reach D:** create the `version:` block and move four keys into it —
+**To reach E:** create the `version:` block and move four keys into it —
 `release.version_scheme` → `version.scheme`, `release.version_owner` → `version.owner`,
-`release.version_file` → `version.file`, `release.version_mirrors` → `version.mirrors`.
+`release.version_file` → `version.file`, `release.version_mirrors` → `version.mirrors`. Then
+apply the D → E transition above.
 
 ### Era B — declared `2`, actually plugin 0.3
 
 **Tells:** `vcs:` present; `release.version_scheme` / `version_owner` / `version_file` present;
 **no** `release.version_mirrors`; **no** `excludes` on any agent.
 
-**To reach D:** the era C moves, plus:
+**To reach E:** the era C moves (which chain through D → E), plus:
 
 - add `version.mirrors` — **requires a human decision.** Never default it silently; see the
   migration command.
@@ -53,7 +86,7 @@ Each era lists the keys that identify it. Detect by testing for the newest tells
 **Tells:** **no** `vcs:` block at all; `release.git_owner` and `release.branching` present;
 `testing.policy`, `testing.mandatory_areas`, `testing.condition_of_done` present.
 
-**To reach D:** the era B and C moves, plus:
+**To reach E:** the era B and C moves (which chain through D → E), plus:
 
 - create `vcs:` — `release.git_owner` → `vcs.owner`, `release.branching` → `vcs.branching`, and
   set `vcs.system` by checking whether the project is actually under git.

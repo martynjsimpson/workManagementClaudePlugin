@@ -12,7 +12,7 @@
 #
 # Don't hand-edit this. `/work-init --upgrade` migrates an older manifest and
 # bumps it for you.
-model_version: 3
+model_version: 4
 
 # ---------------------------------------------------------------------------
 # Project identity
@@ -30,7 +30,60 @@ project:
   domain_rules: null
 
 # ---------------------------------------------------------------------------
-# Paths. All relative to the repository root. Set to null if not used.
+# Project boundary.
+#
+# Set `root` when this project is ONE MEMBER of a larger repository — an app
+# in a monorepo, a package in a workspace. It separates the two roots the
+# model otherwise conflates:
+#
+#   VCS root      where .git lives; where branch, tag and push happen
+#   project root  where this project's world begins and ends
+#
+# Leave `root` null on an ordinary single-project repository. The two roots
+# are then the same and nothing below changes.
+#
+# See the README's "Monorepos and partial repositories" section.
+# ---------------------------------------------------------------------------
+scope:
+  # Project root, relative to the VCS root. null means the project IS the
+  # whole repository — the single-project default.
+  #
+  #   root: apps/toolA
+  root: null
+
+  # Paths OUTSIDE the project root this project may WRITE, each relative to
+  # the VCS root. Empty is the right answer almost always; every entry is a
+  # deliberate hole in the boundary, so put the reason in a comment beside it.
+  #
+  # Reads are NOT restricted — building against a shared package means
+  # reading it. Only writes are fenced.
+  writes_outside: []
+
+  # Where /work-init writes .claude/agents/*.md when `root` is set. Inert
+  # when `root` is null.
+  #
+  #   project  <root>/.claude/agents/ — self-contained; the roster is found
+  #            when the session starts in the project directory, which is
+  #            the recommended way to work a monorepo member.
+  #   repo     .claude/agents/ at the VCS root — for when the session always
+  #            starts at the repository root instead.
+  #
+  # Either way, agent NAMES are prefixed with the project slug when `root`
+  # is set, so two members' rosters can never be confused for each other.
+  agents_dir: project
+
+# ---------------------------------------------------------------------------
+# Paths. All relative to the PROJECT ROOT — that is, to <scope.root> when it
+# is set, and to the repository root when it is null.
+#
+# A leading slash anchors a path to the VCS ROOT instead, exactly as it does
+# in .gitignore. Use it for the handful of things that genuinely live above
+# the project — a shared CI definition, a repo-wide changelog:
+#
+#   changelog: CHANGELOG.md    -> apps/toolA/CHANGELOG.md
+#   changelog: /CHANGELOG.md   -> the repository's own CHANGELOG.md
+#
+# Set to null if not used.
 # ---------------------------------------------------------------------------
 paths:
   work: docs/work                 # (required) requests.md, backlog.yml, active-release.md
@@ -101,6 +154,27 @@ version:
   # touch only `file` — that's a deliberate choice, not an oversight.
   mirrors: []
 
+  # Shape of the git tag a release creates. null renders the version alone,
+  # per `scheme` — v1.2.3 under semver-v, 1.2.3 under semver.
+  #
+  # A tag name is REPO-GLOBAL, so on a monorepo null is a collision waiting
+  # to happen: the first time two members both reach 1.2.3, the second tag
+  # fails. Set a template that carries the member:
+  #
+  #   tag_template: "toolA/v{version}"
+  #   tag_template: "{slug}-{version}"
+  #
+  # {version} is the number rendered per `scheme` (including the v prefix
+  # under semver-v). {slug} is project.name lower-cased with non-alphanumerics
+  # collapsed to single hyphens.
+  #
+  # CHECK YOUR PIPELINE when you set this. A workflow triggered on `v*` will
+  # NOT fire on `toolA/v1.2.3`, and a release that looks shipped but never
+  # built is the worst outcome this field can produce. /work-init and
+  # /work-release both cross-check the trigger in release.pipeline.definition
+  # against this template.
+  tag_template: null
+
 # ---------------------------------------------------------------------------
 # Release mechanics — what happens around shipping, beyond versioning and
 # version control. The release coordinator is a PERSONA /work-release adopts
@@ -152,6 +226,15 @@ testing:
 # rather than a convention nothing enforces.
 #
 # Glob patterns are permitted in owns and excludes.
+#
+# All three lists are PROJECT-relative, like `paths` above — on a monorepo
+# member, `owns: [src]` means <scope.root>/src, so the roster reads the same
+# as it would in a standalone repository.
+#
+# A leading slash escapes to the VCS root. That's fine in `reads` (a shared
+# package, root tooling config). In `owns` it's a write outside the boundary,
+# so the same path must also appear in scope.writes_outside or /work-init
+# treats it as an error.
 # ---------------------------------------------------------------------------
 agents:
   - name: product-manager

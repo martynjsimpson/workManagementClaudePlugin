@@ -186,6 +186,9 @@ useful now and wrong within a cycle, so it must not be persisted into `active-re
 - Do not run git commands.
 - Do not assign a version number. `/work-release` does that in its Step 2.
 - Do not create planning files beyond the four the model defines.
+- Do not write outside the project root. Where `<scope.root>` is set, the sibling directories
+  are other projects, and a work item scoped to one of them is a request that belongs in that
+  project's own intake — say so rather than refining it here.
 - Do not make architectural decisions — route those to the architect in `<agents>`.
 - Do not edit `<paths.work>/project.yml`; if a manifest fact is wrong, tell the human to
   run `/work-init --repair`.

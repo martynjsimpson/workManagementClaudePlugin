@@ -20,7 +20,8 @@ Read `${CLAUDE_PLUGIN_ROOT}/skills/work-model/references/model.md` for the reque
 
 **Preflight per `<vcs.system>`:**
 
-- **`git`** — check the working tree is clean with `git status --porcelain`. Read-only git
+- **`git`** — check the working tree is clean with `git status --porcelain`, scoped to the
+  project root per `config-resolution.md` where `<scope.root>` is set. Read-only git
   only. A dirty tree is not a hard stop here, but say that this command appends to
   `requests.md` and may move source files, so a clean baseline makes the change reviewable.
 - **`none`** — there is no undo. Back up `<paths.work>/requests.md` before writing if it
@@ -34,7 +35,12 @@ and the source files you would retire. Then stop and say nothing was written.
 ## Step 1 — Identify sources
 
 If a path was given as an argument, use only that. Otherwise sweep for work hiding in other
-forms, in roughly this order of yield:
+forms, in roughly this order of yield.
+
+**Sweep the project root, not the repository**, where `<scope.root>` is set. Another member's
+`TODO.md` is not this project's intake, and ingesting it produces requests nobody here can
+act on — filed under this project's IDs, where they will be refined and scoped before anyone
+notices they belong to a different app.
 
 | Source | What to look for |
 |---|---|

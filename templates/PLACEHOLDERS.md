@@ -3,6 +3,12 @@
 How `/work-init` fills each `{{PLACEHOLDER}}`. Values in `<angle brackets>` are manifest
 lookups from `<paths.work>/project.yml`.
 
+**Resolve every path before substituting it.** Manifest paths are relative to the project
+root, with a leading slash anchoring to the VCS root — see the two-roots section of
+`skills/work-model/references/config-resolution.md`. A generated agent file carries resolved
+paths, never the manifest's shorthand: the manifest is written to stay portable, and the
+prompt is written to be acted on.
+
 Placeholders marked **derived** must be computed, not asked about. They are the reason
 ownership and release mechanics are declared once — computing them is what keeps N agent
 files consistent with one manifest.
@@ -26,8 +32,42 @@ files consistent with one manifest.
 
 ## Derived — ownership
 
+**`{{PROJECT_BOUNDARY_SECTION}}`** (derived) from `<scope>`:
+
+- **`scope.root` is null** — omit entirely, heading and all. The project is the repository and
+  there is no second boundary to describe. Do not emit a paragraph saying so; a generated
+  agent that opens by explaining a constraint that does not apply to it has spent its most
+  valuable lines on nothing.
+- **`scope.root` is set** — a short paragraph, before the owned-paths list, stating the
+  project root as a literal path and that nothing outside it may be written. Name the
+  repository root too, and say that reading outside is fine. Where `<scope.writes_outside>`
+  has entries, list them as the named exceptions with whatever reason the manifest's comments
+  give. For example:
+
+  > **This project is `apps/toolA`, one member of a repository rooted at
+  > `internal-tools/`.** Everything you write goes inside `apps/toolA`. You may read anything
+  > in the repository — a shared package, a root config — but the directories beside yours
+  > belong to other projects and are not yours to change, even to fix something obviously
+  > broken in them. Report it instead.
+
+  The ordering matters: this comes *before* the owned-paths list because it is the outer
+  constraint, and the paths below it are a subdivision of what it permits.
+
+**`{{BOUNDARY_CONSTRAINT}}`** (derived) — the one-line constraint form of the same fact.
+
+- **`scope.root` is null** — emit `You do not write outside the repository.` The line is
+  nearly free and it forecloses an agent reaching into a sibling directory on the filesystem.
+- **`scope.root` is set** — `You do not write outside `<scope.root>`. Other directories in
+  this repository belong to other projects; report problems there rather than fixing them.`
+  Append the `<scope.writes_outside>` entries as the exceptions where any exist.
+
 **`{{OWNED_PATHS_LIST}}`** — a markdown list of the agent's `owns` entries, one per line, each
 as `` - `path` `` followed by a short gloss of what lives there if the survey established it.
+
+Where `<scope.root>` is set, **render these as full paths from the repository root** —
+`apps/toolA/src`, not `src` — even though the manifest stores them project-relative. The
+manifest is optimised for portability; a generated prompt is optimised for an agent that has
+to act on it, and `src` inside a monorepo is ambiguous in exactly the way that matters.
 
 **`{{OWNED_PATHS_PROSE}}`** — the same paths as a comma-separated inline phrase, for the
 frontmatter `description`.
@@ -60,7 +100,16 @@ expanded):
 - one row per entry in `<inactive_agents>` whose work might plausibly land here -> redirect to
   that entry's `redirect_to`, noting the role does not exist;
 - for the architect's `consult_before` triggers, one row on every *other* agent's table
-  redirecting to the architect.
+  redirecting to the architect;
+- where `<scope.root>` is set, **one row as the first in the table**, covering everything
+  outside the project root at once:
+
+  | Change anything outside `apps/toolA` | **The human** — that is another project in this repository |
+
+  Do not enumerate the sibling directories. There may be twenty, the list goes stale the day
+  someone adds the twenty-first, and the catch-all is both shorter and correct by
+  construction. Where `<scope.writes_outside>` has entries, name them in this row as the
+  exceptions rather than giving each its own.
 
 **One exception: never emit a row that blocks `<paths.spikes>`.** Spike output is a defined
 deliverable of a spike work item, and `suggested_agents` may assign a spike to any agent. If
