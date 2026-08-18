@@ -6,6 +6,32 @@ to `version` in [`.claude-plugin/plugin.json`](.claude-plugin/plugin.json) —
 bumping that field is what ships a new version to installed users and, via
 the release workflow, tags a GitHub Release.
 
+## [1.4.1] - 2026-08-18
+
+### Fixed
+
+- **Upgrading a `model_version: 3` manifest could not reach 5.** Era D's transition in
+  `schema-history.md` listed only the moves to era E — `scope`, `version.tag_template` — and
+  stopped. Its heading had been renamed to "To reach F" when era F was added, but the stage
+  expansion underneath it never was. So `/work-init --upgrade` on a version-3 manifest would
+  add the `scope` block, add `tag_template`, write `model_version: 5`, and leave `vcs.owner`
+  and `vcs.branching` in place with no `vcs.stages` at all.
+
+  It failed safely rather than silently: `/work-migrate` Step 5 verifies against the shape
+  cross-check, which requires a `stages:` map, so the migration stopped and left the backup
+  in place. But a failed migration needing diagnosis is not an upgrade path, and era D is the
+  most-used one — it is what every project not yet on 1.3 is running.
+
+  Eras C, B and A were unaffected; each already said "chain through D → E → F" explicitly.
+  Only the era directly below the new one was wrong, which is precisely the entry whose
+  heading rename looks sufficient and is not.
+
+- **Two rules added for introducing a schema era**, because this failure recurs by
+  construction. Adding an era now requires fixing the era immediately below it — which had no
+  transition before, having been current — and walking every era bottom-up, following each
+  chain literally rather than trusting its heading. All five chains were re-verified against
+  the current schema.
+
 ## [1.4.0] - 2026-08-18
 
 ### Added
