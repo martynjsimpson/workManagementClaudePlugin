@@ -77,9 +77,9 @@ route around. Say so plainly, then compensate for the missing safety net:
   mirroring the original paths inside it. Report the exact location.
 - Note that the extract-then-generate step in Step 5 is the riskiest thing this command
   does, and recommend `--dry-run` first.
-- Record the answer for the manifest: `vcs.system: none`, with `vcs.owner` and
-  `vcs.branching` set to `null`. Do not set `system: git` on the assumption that version
-  control will be added later.
+- Record the answer for the manifest: `vcs.system: none`, with every entry in `vcs.stages`
+  set to `none`. Do not set `system: git` on the assumption that version control will be
+  added later.
 
 Under `git`, a clean tree makes backups unnecessary — the diff is the backup. Do not create
 backup files on a git project; they add clutter that then shows up in the very diff the user
@@ -279,15 +279,46 @@ Cover, in this order:
 5. **Type vocabulary.** Offer the model's default sets. If work files already exist,
    extract the types actually in use and make the manifest a superset — do not propose a
    vocabulary that would immediately fail validation.
-6. **Version control.** If Step 0 found a git repository, ask who runs commit/tag/push
-   (`vcs.owner`) and the branching model (`vcs.branching`).
+6. **Release stages.** If Step 0 found a git repository, settle `<vcs.stages>` — the six
+   things a release does, each saying separately whether it happens and who does it. Read
+   the release-stages section of `config-resolution.md` before asking, so the vocabulary and
+   the validity rules are in hand.
 
-   When explaining this, note that the release coordinator is a persona `/work-release`
-   adopts, not a sub-agent — `vcs.owner: command` means that persona does the VCS work.
+   **Do not ask six questions.** Offer named shapes and let one answer write all six fields,
+   then show the resulting table for confirmation. The shapes worth offering:
 
-   **When Step 0 established there is no version control**, set `vcs.system: none`, set
-   `vcs.owner` and `vcs.branching` to `null` rather than leaving their defaults in place, and
-   skip both questions entirely — they have no meaning.
+   | Shape | `branch` | `commit` | `push` | `merge` | `pull_request` | `tag` |
+   |---|---|---|---|---|---|---|
+   | Trunk — commit and tag on the current branch | `none` | `agent` | `agent` | `none` | `none` | `agent` |
+   | Release branch, merged locally | `agent` | `agent` | `agent` | `agent` | `none` | `agent` |
+   | Release branch, pull request | `agent` | `agent` | `agent` | `none` | `agent` | `agent` |
+   | You cut branches, the agent does the rest | `human` | `agent` | `agent` | `none` | `agent` | `agent` |
+   | You own the repository entirely | `human` | `human` | `human` | `human` | `none` | `human` |
+
+   These are an interview convenience, not a manifest field. Always write the six values out
+   explicitly — a preset key in the schema would re-bundle exactly what the stage table exists
+   to unbundle. Say that any shape can be adjusted stage by stage, and adjust it there and then
+   if they want to.
+
+   **Ask about tagging separately if they take a shape that tags.** `tag: none` is a perfectly
+   ordinary answer — plenty of projects carry the version in a file and never tag — and it is
+   the one stage a preset should not quietly decide. Where they choose `none`, confirm
+   `version.file` will be set, since the version then has nowhere else to live.
+
+   When explaining any of this, note that the release coordinator is a persona `/work-release`
+   adopts, not a sub-agent — `agent` names who acts, the AI rather than them, and never
+   authorises spawning a sub-agent for it.
+
+   **Validate before writing.** Run the whole validity table from `config-resolution.md`
+   against whatever they chose, and report every failure at once. Flag interleaved ownership —
+   an `agent` stage between two `human` ones — as a session that will stall mid-release rather
+   than as an error; it is legitimate, and the cost is worth knowing now.
+
+   Then ask `<vcs.delete_branch>`, but only where a `merge` stage is active: `after-merge` is
+   the historical behaviour and the default, `never` keeps the release branch.
+
+   **When Step 0 established there is no version control**, set `vcs.system: none`, set every
+   stage to `none`, and skip this group entirely — the questions have no meaning.
 
 7. **Versioning.** Ask this as its own group. Versioning and version control are independent
    concerns and must not be bundled: a project can carry a version in `package.json` with no

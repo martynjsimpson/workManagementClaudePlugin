@@ -12,9 +12,10 @@ Follow `${CLAUDE_PLUGIN_ROOT}/skills/work-model/references/config-resolution.md`
 manifest at `<paths.work>/project.yml`. Refuse to proceed if it is missing.
 
 **Read `<vcs>`, `<version>`, `<release>` and `<testing>` now and restate them to yourself
-before doing anything else.** Whether there is version control at all, who operates it, who
-assigns the version and where it lives, whether a changelog is required, and whether a
-pipeline follows are all manifest decisions. They are not yours to make, and they are not to
+before doing anything else.** Whether there is version control at all, who performs each
+release stage, who assigns the version and where it lives, whether a changelog is required,
+and whether a pipeline follows are all manifest decisions. They are not yours to make, and
+they are not to
 be inferred from how a previous project worked.
 
 `<vcs>` and `<version>` are independent. A project can be versioned in `package.json` with no
@@ -57,12 +58,12 @@ will be built on. Both are needed before anything can be written, because the br
 depends on the version and the writes have to land on the branch.
 
 **Assign the number.** If `<version.owner>` is `human`, ask for it and wait — the human is
-already here approving scope, which is the natural moment. If `command`, read the current
+already here approving scope, which is the natural moment. If `agent`, read the current
 version from `<version.file>`, propose the next one per `<version.scheme>` with a one-line
 justification drawn from the work in scope, and confirm before using it.
 
 **Name the branch.** Skip this half entirely when `<vcs.system>` is `none` or
-`<vcs.branching>` is `none` — there is no branch, so go straight to Step 2b.
+`<vcs.stages.branch>` is `none` — there is no branch, so go straight to Step 2b.
 
 Otherwise propose `release/<project-slug>-<version>`, where `<project-slug>` is
 `<project.name>` lower-cased with non-alphanumerics collapsed to single hyphens — so a
@@ -83,35 +84,65 @@ correct base. Report the name; let them decide the base.
 Report the version and the branch name together, and state plainly that nothing has been
 written yet.
 
+**Report the stage plan in the same breath.** Read `<vcs.stages>` and state, as a short list,
+which of the six stages happen and who does each. This is the one moment the human can see the
+whole shape of the release before it starts, and two things must be called out explicitly:
+
+- **every `human` stage**, so they know where they will be asked to act;
+- **any interleaving** — an `agent` stage sitting between two `human` ones — because that is a
+  session that stalls mid-flight rather than handing off cleanly at the end. Say where it will
+  stall. Do not treat it as an error; it is a legitimate arrangement whose cost is worth
+  naming before the release rather than during it.
+
+Where consecutive stages are `human`, say they will come as one handoff rather than several.
+
 ## Step 2a — Branch gate
 
-Skip entirely when `<vcs.system>` is `none` or `<vcs.branching>` is `none`.
+Skip entirely when `<vcs.system>` is `none` or `<vcs.stages.branch>` is `none`.
 
 Otherwise the release must be on its own branch before any file is written, so that the
 version bump, the `active-release.md` update, and every implementer's work land there rather
 than on whatever branch the repository happens to be sitting on.
 
-Follow `<vcs.owner>`:
+Follow `<vcs.stages.branch>`:
 
-- **`human`** — do not touch the repository. Give the exact branch name from Step 2 and
+- **`human`** — do not create it. Give the exact branch name from Step 2 and
   **wait for explicit confirmation that the branch exists and is checked out.** Do not
   proceed to Step 2b on an assumption, a "will do", or silence. If they say they used a
   different name, take theirs and record that instead of arguing for yours.
-- **`command`** — create the branch from the current `HEAD` and check it out. Do not check
+
+  **Then verify it**, unless the repository is unreachable — `git rev-parse --abbrev-ref HEAD`
+  against the name they confirmed. This is the first human→agent boundary in the release and
+  the agent is about to write files onto that branch; confirming it exists is not distrust,
+  it is the difference between a release landing on the intended branch and landing wherever
+  the repository happened to be sitting.
+- **`agent`** — create the branch from the current `HEAD` and check it out. Do not check
   out or pull the default branch first: `HEAD` is where the human left the repository, and
-  overriding that choice is the assumption Step 2 exists to avoid. Report the branch name and
-  what it was cut from, so the base is on the record.
+  overriding that choice is the assumption Step 2 exists to avoid.
 
-**Do not run a git command to check the working tree when `<vcs.owner>` is `human`.** The
-repository may not be reachable at all: where a session is sandboxed to a subdirectory, `.git`
-sits above that fence and git reports `not a git repository` rather than a clean tree. That
-error is not a blocker and not a misconfiguration; it is the expected result of not being able
-to see the repository. The human's confirmation is the authority here regardless, so rest on
-it and continue.
+  **Report the base as a resolved ref, not as "the current branch".** Name the branch `HEAD`
+  was on and its short SHA — `cut from main @ a1b2c3d` — so what this release is built on is
+  on the record rather than implied. Whoever reads this later cannot re-derive it: `HEAD` has
+  moved by then.
 
-Where `<vcs.owner>` is `command`, git is reachable by definition — it just created the branch —
-so confirm the working tree before continuing. **Scope the check to the project root** per the
-VCS-scoping protocol in `config-resolution.md`:
+  **If the base is itself a release branch, say so explicitly.** That happens whenever a
+  previous release left the repository on its own branch — which is the normal state when no
+  `merge` or `pull_request` stage is active, and the usual case across a `/work-crunch` run.
+  The consequence is worth one line: this release will contain the previous one's work, and
+  merging this branch later brings that along too. It is not an error and not something to
+  correct silently by switching branches; it is a fact about what is being built that the
+  human should see now rather than discover at merge time.
+
+**A repository that cannot be reached is not a failure here.** Where a session is sandboxed to
+a subdirectory, `.git` sits above that fence and git reports `not a git repository` rather than
+a clean tree. That is the expected result of not being able to see the repository, not a
+blocker and not a misconfiguration. Under a `human`-owned branch stage the human's confirmation
+is the authority regardless, so rest on it and continue; under `agent` the branch could not
+have been created, which is a real stop.
+
+Once the branch exists — whoever made it — confirm the working tree before continuing.
+**Scope the check to the project root** per the VCS-scoping protocol in
+`config-resolution.md`:
 
 ```
 git status --porcelain -- <project root>
@@ -129,8 +160,8 @@ change too.
 Only now, with the branch confirmed, write anything.
 
 **Commit the work files as they stand, before writing anything new.** Skip this entirely
-when `<vcs.system>` is `none`, and never do it when `<vcs.owner>` is `human` — the handoff
-in Step 7 covers those files instead. Otherwise commit `<paths.work>/active-release.md`,
+when `<vcs.system>` is `none`, and never do it when `<vcs.stages.commit>` is `human` — the
+handoff in Step 7 covers those files instead. Otherwise commit `<paths.work>/active-release.md`,
 `<paths.work>/backlog.yml` and `<paths.work>/requests.md`, naming those paths explicitly and
 committing no others, so that unrelated dirt elsewhere in the repository stays where it is.
 If they are already clean, say so and move on.
@@ -189,7 +220,7 @@ later and actively misleading if anyone installs a build mid-session.
 Set `Status: in-progress`.
 
 **Then commit the version bump immediately, as its own commit.** Under `<vcs.system>` `git`
-with `<vcs.owner>` `command`, commit `<version.file>`, every path in `<version.mirrors>`,
+with `<vcs.stages.commit>` `agent`, commit `<version.file>`, every path in `<version.mirrors>`,
 and `active-release.md` — which now carries the version, the branch and the new status — and
 nothing else. Do this before spawning a single agent, so that no implementer's work can land
 in the same commit.
@@ -239,11 +270,11 @@ Each brief must contain:
   `<testing.policy_document>`;
 - who to signal on completion — you, the Release Coordinator, not any role absent from
   `<agents>`;
-- whether they may commit, per `<vcs.system>` and `<vcs.owner>` — nobody commits when
-  `<vcs.system>` is `none`, because there is nothing to commit to, and nobody commits when
-  `<vcs.owner>` is `human` either;
-- the release branch from Step 2a, when `<vcs.branching>` is not `none` — name it explicitly
-  and make clear their work targets it. They should never need to switch branches
+- that they do not commit, whatever `<vcs.stages.commit>` says. Implementers never run
+  version-control commands; the stage table says who commits *their* work on their behalf,
+  and the answer is never them;
+- the release branch from Step 2a, when `<vcs.stages.branch>` is not `none` — name it
+  explicitly and make clear their work targets it. They should never need to switch branches
   themselves; the checkout is already on it.
 
 Run agents in parallel where work items are independent and their owned paths do not
@@ -291,7 +322,8 @@ re-write `<version.file>` unless Step 2b reported it as null. Confirm the value 
 in `active-release.md` matches what is in `<version.file>`; if they differ, something changed
 the file mid-session and that needs resolving before shipping.
 
-Now branch strictly on the manifest. Check `<vcs.system>` first, then `<vcs.owner>`.
+Now branch strictly on the manifest. Check `<vcs.system>` first; if it is `git`, walk the
+stages.
 
 ### `<vcs.system>` is `none`
 
@@ -309,11 +341,23 @@ branch, or a working-tree check, and do not tell the user to run one.
    files by hand, so name what changed — including the version files written in Step 2b and
    their previous values.
 
-### `<vcs.system>` is `git` and `<vcs.owner>` is `command`
+### `<vcs.system>` is `git` — walk the stages
 
-You, as Release Coordinator, perform the release:
+The remaining stages are `push`, `merge` or `pull_request`, and `tag`, in that order. Work
+through them one at a time, doing what `<vcs.stages>` says for each: perform it under `agent`,
+hand it off under `human`, skip it silently under `none`.
 
-0. **Render the tag name, and check it before you use it.** Build it from
+**Plan the handoffs before you start.** Group consecutive `human` stages into a single
+instruction rather than stopping once per stage, and where an `agent` stage sits between two
+`human` ones, say plainly that the session will pause there and why. The human already saw
+this shape in Step 2; do not spring a different one on them now.
+
+**Verify at every human→agent boundary** per the verification table in
+`config-resolution.md`. The next stage builds on the last, and an agent tagging a merge that
+never happened produces a tag pointing at the wrong tree.
+
+0. **Render the tag name, and check it before you use it.** Skip entirely when
+   `<vcs.stages.tag>` is `none`. Build it from
    `<version.tag_template>` per the tag rules in
    `${CLAUDE_PLUGIN_ROOT}/skills/work-model/references/config-resolution.md`. Then, in one
    report before any tagging happens:
@@ -333,48 +377,79 @@ You, as Release Coordinator, perform the release:
 
 1. If `<release.changelog>` is `required`, update `<paths.changelog>` before tagging. Skip
    if `<paths.changelog>` is null and say so.
-2. Finish according to `<vcs.branching>`. The version files were committed in Step 2b — do
-   not re-write or re-commit them here. Confirm that commit is on the branch you are about
-   to tag or merge, and if it is not, something has gone wrong that must be resolved before
+2. **Commit any final changes.** The version files were committed in Step 2b — do not
+   re-write or re-commit them here. Confirm that commit is on the branch you are about to
+   integrate or tag, and if it is not, something has gone wrong that must be resolved before
    shipping: a tag pointing at a tree carrying the previous version is the one outcome the
    Step 2b ordering exists to prevent.
-   - **`none`** — commit to the current branch, tag it, and push the branch and tag together.
-   - **`branch`** — commit any final changes on the release branch from Step 2a, then merge it
-     into the branch it was cut from (`--no-ff`, so the release stays visible in history), tag
-     the resulting commit, and push that branch and the tag. Delete the release branch once
-     the merge is pushed. If the base branch is not one you can merge into, stop and hand the
-     merge to the human rather than forcing it.
 
-     **Fetch the base before merging into it**, and say whether it had moved. Where the same
-     repository is checked out more than once — a second clone, or a `git worktree`, which is
-     the usual arrangement when two of its apps are worked in parallel — this checkout's copy
-     of the base branch can be well behind, and merging onto a stale ref quietly produces a
-     release built on a tree nobody has.
-   - **`pr`** — commit any final changes on the release branch, push it, and open a pull
-     request into the branch it was cut from (`gh pr create` if available; otherwise give the
-     human the title, body and branch name). **Stop there — do not tag.** A merge via PR is a
-     human action whose timing you do not control. Record that the PR is open, leave
-     `Status: ready-for-release`, and say that re-running `/work-release` after the merge
-     completes the tag.
-3. If `<version.file>` is null, the tag is the version of record — create it with the name
-   rendered in step 0, from the number confirmed in Step 2.
-4. Report what happens next automatically — see the pipeline rules below. Under `pr` this
-   applies only once the PR has merged; say so rather than implying it fires now.
-5. List `<release.deploy_steps>` as the human's remaining actions. Under `pr` these follow
-   the eventual merge, not this session.
+3. **`push`.** Publish the release branch — or the current branch, where `<vcs.stages.branch>`
+   is `none`. One owner covers every push in this release, this one and the tag push below
+   alike.
 
-### `<vcs.system>` is `git` and `<vcs.owner>` is `human`
+   Under `human`, give the exact command and wait; then verify with `git ls-remote` that the
+   ref actually landed before any later `agent` stage builds on it. Under `none`, nothing
+   leaves this machine — say so explicitly in the final report, because a release that exists
+   only locally is easy to mistake for one that shipped.
 
-You do not touch the repository. Run no git command, create no branch, make no commit,
-write no tag, open no pull request. Hand off with an ordered list drawn from
-`<version.scheme>`, `<version.tag_template>`, `<version.file>`, `<release.changelog>`,
-`<paths.changelog>`, `<vcs.branching>`, and `<release.deploy_steps>`.
+4. **`merge` or `pull_request`** — whichever is active; never both.
 
-**Give the tag as its literal rendered name** — `toolA/v1.2.3`, not "tag the release" —
-because that string is the whole of what `<version.tag_template>` exists to get right, and a
-handoff that leaves it to be reconstructed is where a repository-global `v1.2.3` gets created
-by hand on a monorepo. Where the template is null and `<scope.root>` is set, say that too, so
-they can decide whether the bare name is what they want.
+   **`merge`** — merge the release branch into the branch it was cut from, `--no-ff` so the
+   release stays visible in history. **Fetch the base first**, and say whether it had moved:
+   where the same repository is checked out more than once — a second clone, or a
+   `git worktree`, which is the usual arrangement when two of its apps are worked in parallel
+   — this checkout's copy of the base can be well behind, and merging onto a stale ref quietly
+   produces a release built on a tree nobody has. If the base is not one you can merge into,
+   stop and hand the merge over rather than forcing it. Then apply `<vcs.delete_branch>`:
+   remove the release branch under `after-merge`, leave it under `never`.
+
+   **`pull_request`** — open it into the branch the release was cut from (`gh pr create` if
+   available; otherwise give the human the title, body and branch name). Record that it is
+   open.
+
+   **Under `human`, this is where most releases stop.** A merge you do not control has a
+   timing you do not control. Say the release is not finished until it lands, leave
+   `Status: ready-for-release`, and say that re-running `/work-release` after the merge picks
+   up at the tag stage. That is what makes a `human`-owned integration defer the tag without
+   any separate timing field: tagging comes after integration, so it waits for it.
+
+5. **`tag`.** Create the tag with the name rendered in step 0, from the number confirmed in
+   Step 2, and push it if `push` is active.
+
+   **Never tag before an active `pull_request` has merged**, whoever owns the stages. A tag
+   created at PR time points at a commit that may never reach the base, or that a squash or
+   rebase rewrites out from under it. This is not configurable.
+
+   Under `human`, give the literal rendered tag — `toolA/v1.2.3`, not "tag the release". That
+   string is the whole of what `<version.tag_template>` exists to get right, and a handoff
+   that leaves it to be reconstructed is where a repository-global `v1.2.3` gets created by
+   hand on a monorepo. Where the template is null and `<scope.root>` is set, say that too, so
+   they can decide whether the bare name is what they want.
+
+   Where `<version.file>` is null, the tag is the version of record — so `tag: none` should
+   already have failed validation, and finding it here is a manifest problem to report rather
+   than a step to skip.
+
+6. **Close the release out.** Once the last active stage is done — performed, or confirmed and
+   verified after a handoff — set `Status: released`. **A `human`-owned final stage still
+   completes the release in this session**, on their confirmation; requiring a second run to
+   move the status line leaves it at `ready-for-release` indefinitely whenever they do not
+   come back, and that line is what anything outside this session reads.
+
+   The one exception is an open pull request: integration has not landed, so the release
+   genuinely is not finished and `ready-for-release` is the honest status.
+
+7. Report what happens next automatically — see the pipeline rules below. Where a pull request
+   is open, this applies only once it merges; say so rather than implying it fires now.
+
+8. List `<release.deploy_steps>` as the human's remaining actions, after any merge that is
+   still outstanding rather than as part of this session.
+
+**Where every stage is `human`**, the above collapses into a single ordered handoff — run no
+git command, create no branch, make no commit, write no tag, open no pull request. Draw the
+list from `<version.scheme>`, `<version.tag_template>`, `<version.file>`,
+`<release.changelog>`, `<paths.changelog>`, the active integration stage, and
+`<release.deploy_steps>`.
 
 Name the work files under `<paths.work>` in that list, alongside the code and the version
 files. `active-release.md`, `backlog.yml` and `requests.md` all carry uncommitted changes —
@@ -384,10 +459,6 @@ nothing else in the release will commit them on their behalf.
 State the version already written in Step 2b and the branch confirmed in Step 2a, so they
 commit and tag to match what is on disk rather than reconciling a recommendation against it.
 Do not recommend a version bump here — it has already happened.
-
-Under `<vcs.branching>` `branch` or `pr`, the merge into the base branch is theirs, and a
-release is not finished when the work is done — it is finished when the merge lands. Say so
-rather than declaring the release complete at the point you stop.
 
 ## If the release is abandoned
 
@@ -436,22 +507,26 @@ Finish by telling the human that `/work-plan` closes the release out in the plan
 
 ## Constraints
 
-- **Never write any file before the branch gate has passed** when `<vcs.branching>` is
-  `branch` or `pr`. That includes `active-release.md`, `<version.file>` and its mirrors. A
+- **Never write any file before the branch gate has passed** when `<vcs.stages.branch>` is
+  active. That includes `active-release.md`, `<version.file>` and its mirrors. A
   write before the branch exists lands on whatever branch the repository is sitting on, which
   on a shared repository may be one nobody wanted touched.
 - Never proceed past Step 2a on anything short of explicit confirmation that the branch
-  exists, when `<vcs.owner>` is `human`.
+  exists, when `<vcs.stages.branch>` is `human`.
 - Never assume a branch is cut from the default branch, and never check out or pull the
   default branch to create one. Report the name; the base is the human's call.
-- Never perform a VCS action when `<vcs.owner>` is `human`, and never merely describe one
-  when it is `command`. This branch is the entire point of declaring it. That includes
-  read-only git: do not run `status`, `log` or `rev-parse` to satisfy your own curiosity when
-  the human owns the repository, and never report a git error as a release problem.
+- Never perform a stage the manifest gives to `human`, and never merely describe one it gives
+  to `agent`. Per-stage ownership is the entire point of declaring it, and "it was easier to
+  just do it" is the failure mode it exists to prevent.
+- Never skip the verification after a `human` stage that an `agent` stage follows. Confirmation
+  is what the human said; verification is what the repository says, and the next stage builds
+  on the second.
+- Never invent a stage value. A missing one is a stop, not a default — see
+  `config-resolution.md`.
 - Never attempt, or instruct the user to attempt, any VCS action when `<vcs.system>` is
   `none`. Skip those steps silently rather than reporting them as failures or blockers.
 - Never leave a status transition uncommitted when `<vcs.system>` is `git` and
-  `<vcs.owner>` is `command`. The status line is the release's external interface, and an
+  `<vcs.stages.commit>` is `agent`. The status line is the release's external interface, and an
   uncommitted one has not moved.
 - Never commit the work files by a repo-wide `git add`. Name `active-release.md`,
   `backlog.yml` and `requests.md` by path — a monorepo holds other projects' changes, and
@@ -477,7 +552,10 @@ Finish by telling the human that `/work-plan` closes the release out in the plan
 - Never defer the version write to ship time when `<version.file>` is set. Writing it in
   Step 2b is what makes artefacts built during the session carry the right number.
 - Never leave a bumped version in place on an abandoned release.
-- Never tag or push a tag when `<vcs.branching>` is `pr` until the pull request has merged.
+- Never tag or push a tag while a `pull_request` stage is active and its pull request has not
+  merged. This holds whoever owns the stages and is not configurable.
+- Never leave a release at `ready-for-release` because a final stage was `human`-owned. Confirm,
+  verify, and close it out. An open pull request is the one exception.
 - Never spawn a release-manager or release-coordinator agent. You are that persona; the
   role exists only as this command.
 - Do not spawn any agent absent from `<agents>`.

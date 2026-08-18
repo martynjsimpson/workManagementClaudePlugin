@@ -132,10 +132,15 @@ Do not emit a row for a `release-manager` or `release-coordinator`. That role is
 - `system: none` -> `This project is not under version control. Do not run git commands, and
   do not ask anyone to commit, tag, or branch — there is no repository. Changes you make take
   effect immediately and cannot be reverted, so confirm anything destructive first.`
-- `system: git`, `owner: human` -> `You do not commit, branch, tag, or push. The human owns all
-  version-control operations.`
-- `system: git`, `owner: command` -> `You do not commit. The /work-release command performs all
-  version-control operations.`
+- `system: git`, `stages.commit: human` -> `You do not commit, branch, tag, or push. The human
+  performs every version-control operation on this project, including committing your work.`
+- `system: git`, `stages.commit: agent` -> `You do not commit. The /work-release command
+  commits your work as part of the release.`
+
+**Resolve this from `<vcs.stages.commit>` alone.** It is the only stage an implementer's work
+depends on — whether the human or the release coordinator later pushes, merges or tags changes
+nothing about what the implementer does, and enumerating the other five in a generated prompt
+is noise the agent has no use for.
 
 In no case does the implementing agent run VCS commands. What differs is who does, or whether
 anyone can — and stating it explicitly prevents the agent from inventing an answer, which on a
@@ -149,7 +154,7 @@ behind it.
 
 - `human` -> `You do not assign version numbers. /work-plan always writes Version: TBD; the
   human supplies the number at the start of the release session.`
-- `command` -> `You do not assign version numbers. /work-plan always writes Version: TBD;
+- `agent` -> `You do not assign version numbers. /work-plan always writes Version: TBD;
   /work-release assigns it at the start of the release session.`
 
 Either way the PM writes `TBD`. What differs is who fills it in, and when — which is always at

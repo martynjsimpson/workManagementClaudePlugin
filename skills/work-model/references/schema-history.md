@@ -1,6 +1,6 @@
 # Manifest schema history
 
-The current schema is **`model_version: 4`**. A plugin refuses to act on any other value; see
+The current schema is **`model_version: 5`**. A plugin refuses to act on any other value; see
 `config-resolution.md`.
 
 ## The honest caveat
@@ -17,17 +17,57 @@ reliable and detection is a belt-and-braces cross-check rather than the primary 
 
 Each era lists the keys that identify it. Detect by testing for the newest tells first.
 
-### Era E — `model_version: 4` (plugin 1.3+) — current
+### Era F — `model_version: 5` (plugin 1.4+) — current
+
+- `vcs:` holds `system`, a `stages:` map, and `delete_branch` — and **no** `owner` or
+  `branching`
+- `vcs.stages` carries all six of `branch`, `commit`, `push`, `merge`, `pull_request`, `tag`,
+  each valued `none | agent | human`
+- `version.owner` takes `human | agent`; the value `command` no longer exists anywhere
+- everything era E had, unchanged
+
+**What changed in meaning:** there is no longer a global "who owns version control" answer.
+`vcs.owner` asked once what `vcs.stages` now asks six times, and `vcs.branching` bundled
+*whether* each stage happens with *which* stages happen at all. Splitting them is what makes
+"you cut the branch, the agent commits and opens the PR, nobody tags" expressible.
+
+Tag timing became derived rather than declared. Because `tag` follows integration in the stage
+order, a `human`-owned `merge` already defers the tag to a later run — so no separate timing
+field is needed.
+
+### Era E — `model_version: 4` (plugin 1.3)
+
+**Tells:** `scope:` block present; `vcs:` still carries `owner` and `branching`; no
+`vcs.stages`.
 
 - top-level `scope:` block with `root`, `writes_outside`, `agents_dir`
 - `version:` block carries `tag_template` alongside `scheme`, `owner`, `file`, `mirrors`
 - everything era D had, unchanged
 
-**What changed in meaning, not just in shape:** every path field is now relative to the
-**project root** rather than the repository root, with a leading slash escaping to the VCS
-root. On a manifest whose `scope.root` is null those are the same directory, so **no existing
-path needs rewriting** — which is what makes D → E an additive migration rather than a
-rewrite.
+Every path field is relative to the **project root** rather than the repository root, with a
+leading slash escaping to the VCS root. On a manifest whose `scope.root` is null those are the
+same directory, so **no existing path needs rewriting** — which is what made D → E an additive
+migration rather than a rewrite.
+
+**To reach F:** expand the two old keys into the stage map. This is fully mechanical — every
+combination has exactly one destination, and none of it needs a human decision:
+
+| `owner` | `branching` | `branch` | `commit` | `push` | `merge` | `pull_request` | `tag` |
+|---|---|---|---|---|---|---|---|
+| `command` | `none` | `none` | `agent` | `agent` | `none` | `none` | `agent` |
+| `command` | `branch` | `agent` | `agent` | `agent` | `agent` | `none` | `agent` |
+| `command` | `pr` | `agent` | `agent` | `agent` | `human` | `agent` | `agent` |
+| `human` | `none` | `none` | `human` | `human` | `none` | `none` | `human` |
+| `human` | `branch` | `human` | `human` | `human` | `human` | `none` | `human` |
+| `human` | `pr` | `human` | `human` | `human` | `human` | `human` | `human` |
+
+Then: add `vcs.delete_branch: after-merge`, which is what era E did unconditionally; and rename
+`version.owner: command` to `agent`. Under `vcs.system: none`, set every stage to `none`
+instead of applying the table.
+
+The `command`/`pr` row is the one worth reading twice. Era E opened the PR and stopped without
+tagging, expecting a re-run after the merge — that is `merge: human` plus `tag: agent`, and the
+deferral falls out of the ordering rather than needing to be stated.
 
 ### Era D — `model_version: 3` (plugin 0.6–1.2)
 
@@ -40,7 +80,7 @@ top-level `scope:` block.
 - `testing:` with `policy_document`, `agent`
 - every entry in `agents:` has `excludes`
 
-**To reach E:**
+**To reach F:**
 
 - add `scope:` with `root: null`, `writes_outside: []`, `agents_dir: project`. `root: null`
   preserves era D behaviour exactly, so this is the safe default and the only one that needs
@@ -62,17 +102,17 @@ top-level `scope:` block.
 **Tells:** `release.version_mirrors` present; `excludes` present on agents; no top-level
 `version:`.
 
-**To reach E:** create the `version:` block and move four keys into it —
+**To reach F:** create the `version:` block and move four keys into it —
 `release.version_scheme` → `version.scheme`, `release.version_owner` → `version.owner`,
 `release.version_file` → `version.file`, `release.version_mirrors` → `version.mirrors`. Then
-apply the D → E transition above.
+apply the D → E and E → F transitions above.
 
 ### Era B — declared `2`, actually plugin 0.3
 
 **Tells:** `vcs:` present; `release.version_scheme` / `version_owner` / `version_file` present;
 **no** `release.version_mirrors`; **no** `excludes` on any agent.
 
-**To reach E:** the era C moves (which chain through D → E), plus:
+**To reach F:** the era C moves (which chain through D → E → F), plus:
 
 - add `version.mirrors` — **requires a human decision.** Never default it silently; see the
   migration command.
@@ -86,7 +126,7 @@ apply the D → E transition above.
 **Tells:** **no** `vcs:` block at all; `release.git_owner` and `release.branching` present;
 `testing.policy`, `testing.mandatory_areas`, `testing.condition_of_done` present.
 
-**To reach E:** the era B and C moves (which chain through D → E), plus:
+**To reach F:** the era B and C moves (which chain through D → E → F), plus:
 
 - create `vcs:` — `release.git_owner` → `vcs.owner`, `release.branching` → `vcs.branching`, and
   set `vcs.system` by checking whether the project is actually under git.

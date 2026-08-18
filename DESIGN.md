@@ -102,10 +102,58 @@ everything exactly as it stands, because abandonment means reverting code *and* 
 version, and an unattended agent undoing a working tree is the one action worth ruling out
 entirely.
 
-It requires `vcs.owner: command` — the branch gate is the human owning the repository, and no
-run-scoped override can borrow that — and a required changelog, since that is the only durable
-narrative of what a multi-release run shipped. Under `vcs.branching: pr` it caps itself at one
-release, because the merge is yours to time.
+It requires every release stage owned by `agent` or set to `none` — a `human` stage waits
+indefinitely for someone who is not there, and no run-scoped override can conjure a person —
+and a required changelog, since that is the only durable narrative of what a multi-release run
+shipped. Where a `pull_request` stage is active it caps itself at one release, because the
+merge is yours to time.
+
+## Release stages are owned individually, not collectively
+
+`vcs.owner` asked one question — agent or human — and `vcs.branching` bundled *whether* each
+version-control action happens with *which* set of them happens at all. Between them they
+offered three shapes out of roughly fifteen sensible ones, and none of the obvious wants was
+expressible: cut the branch yourself while the agent commits and opens the pull request; push
+a release branch and stop; never tag at all, because the version lives in `package.json` and
+the pipeline triggers on a branch push.
+
+Enablement and ownership turned out to be one question asked twice — "does this happen, and if
+so who does it?" — so `vcs.stages` asks it once per stage with a single three-value vocabulary.
+Six fields replaced two, and the migration is still a mechanical table lookup because every one
+of the old six combinations has exactly one destination.
+
+Three things fell out rather than being designed:
+
+**Tag timing stopped needing a field.** An earlier draft had `tag: after-integration` for the
+pull-request case. But tagging already follows integration in the stage order, so a
+`human`-owned merge defers the tag by construction — which is precisely what the old `pr`
+branching mode did by special case.
+
+**Commit is the pivot, not a peer.** Every later stage operates on commits, so `commit: human`
+forces everything after it to `human` or `none`. That constraint is not a limitation bolted on;
+it *is* the old `vcs.owner: human`, now expressible in the same vocabulary as everything else
+instead of living as a special case.
+
+**Verification became mandatory at every human→agent boundary.** The old branch gate already
+insisted on confirmation "not on an assumption, a 'will do', or silence". Generalising ownership
+generalised that standard: an agent about to tag a merge it did not perform must confirm the
+merge actually landed, because it is building on work it cannot see.
+
+The cost is real and worth stating: a release can now stop, wait, resume and stop again where
+it previously stopped at most once. Consecutive `human` stages are collapsed into one handoff
+to keep that tolerable, and `/work-release` reports the whole stage plan up front so an
+interleaved arrangement is visible before the release rather than during it.
+
+## `agent`, not `command`
+
+The stage values name *who acts* — the AI or the human. `command` was internal jargon (the
+plugin's own commands) leaking into a user-facing value, and it read as though the alternative
+to a human was a piece of software rather than something making decisions.
+
+The word is deliberately not a promise about spawning. The release coordinator remains a
+persona `/work-release` adopts, never a sub-agent, and `agent` in `vcs.stages` never authorises
+creating one. `testing.agent` uses the word in its other sense — naming a roster member — and
+the two do not interact.
 
 ## The schema is versioned, and the gate is real
 

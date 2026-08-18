@@ -48,16 +48,16 @@ prevent gets reintroduced.
 
 ## Schema compatibility gate
 
-**The supported schema is `model_version: 4`.** Check this before reading any other field and
+**The supported schema is `model_version: 5`.** Check this before reading any other field and
 before taking any action. A command that proceeds against a schema it does not understand will
 misread a key that has moved — silently, and with a plausible-looking result.
 
 | Condition | Action |
 |---|---|
-| `model_version` == 4 | Continue to the shape cross-check below. |
-| `model_version` < 4 | **Stop.** Report: "This manifest uses schema version N; this plugin needs version 4. Run `/work-init --upgrade` to update it." |
-| `model_version` > 4 | **Stop.** Report that the manifest is newer than the plugin, and that the plugin should be updated. Do not proceed by ignoring unknown fields. |
-| `model_version` absent | **Stop.** Treat as pre-4 and direct to `/work-init --upgrade`. |
+| `model_version` == 5 | Continue to the shape cross-check below. |
+| `model_version` < 5 | **Stop.** Report: "This manifest uses schema version N; this plugin needs version 5. Run `/work-init --upgrade` to update it." |
+| `model_version` > 5 | **Stop.** Report that the manifest is newer than the plugin, and that the plugin should be updated. Do not proceed by ignoring unknown fields. |
+| `model_version` absent | **Stop.** Treat as pre-5 and direct to `/work-init --upgrade`. |
 
 **Never auto-migrate.** No command may rewrite the manifest as a side effect of doing something
 else — a surprise nobody asked for, and the manifest is the one file meant to stay
@@ -68,13 +68,18 @@ the same procedure `/work-migrate` describes, in the same session, before regene
 files that depend on the result. Run `/work-migrate` directly instead when you want to review or
 control the manifest edit on its own, separate from agent regeneration.
 
-**Shape cross-check.** A manifest can declare `4` and still be wrong — hand-edited, or
+**Shape cross-check.** A manifest can declare `5` and still be wrong — hand-edited, or
 part-migrated. Confirm the current markers are present: a top-level `scope:` block with `root`,
 `writes_outside` and `agents_dir`; a top-level `version:` block carrying `tag_template`; `vcs:`
-with `system`; `release:` carrying only `changelog`, `pipeline`, `deploy_steps`; `testing:` with
+with `system` and a `stages:` map holding all six stage keys, and **no** `owner` or `branching`;
+`release:` carrying only `changelog`, `pipeline`, `deploy_steps`; `testing:` with
 `policy_document`; `excludes` on every agent. If the declaration and the shape disagree, say so
 and stop. Do not repair it inline — except inside `/work-init --upgrade`, which exists for
 exactly this.
+
+A surviving `vcs.owner` or `vcs.branching` is the specific tell of a part-migrated version-5
+manifest. Those keys do not merely move — their meaning is distributed across six fields — so a
+command that reads either one is reading a decision that no longer exists.
 
 For what each earlier era looks like and how it maps forward, read `schema-history.md`. Note
 especially that `model_version: 2` covers four different shapes, because the number was left
@@ -85,9 +90,13 @@ keys, not by its declaration.
 
 If a required field is missing (`project.name`, `project.description`,
 `project.primary_reference`, `scope.root` — which may be null but must be present,
-`paths.work`, `paths.spikes`, `ids.*`, `taxonomy.*`, `vcs.system`, `version.scheme`,
-`version.owner`, `release.*`), name the missing field and stop. Do not substitute a default
-for a required field.
+`paths.work`, `paths.spikes`, `ids.*`, `taxonomy.*`, `vcs.system`, `vcs.stages.*` — all six,
+`version.scheme`, `version.owner`, `release.*`), name the missing field and stop. Do not
+substitute a default for a required field.
+
+**A missing stage is never assumed.** There is no sensible default for "who tags this
+project": guessing `agent` performs an action nobody authorised, and guessing `human` stalls a
+session for no reason. Name the missing stage and stop.
 
 A field being **present with a null value** is not the same as missing. `scope.root: null` is
 an explicit statement that the project is the whole repository; an absent `scope` block is a
@@ -144,6 +153,86 @@ doing it. The fix is a `writes_outside` entry the human adds deliberately, not a
 call made mid-session. This matters most in the case the field exists for: a repository where
 a sibling directory is another team's app, being worked in another checkout, right now.
 
+## Release stages
+
+A release performs six things. `<vcs.stages>` says, for each one separately, whether it happens
+and who does it. There is no global "who owns version control" switch — that question is asked
+six times because its answer legitimately differs six ways.
+
+| Stage | What it is |
+|---|---|
+| `branch` | cut a release branch from `HEAD` |
+| `commit` | commit the work |
+| `push` | publish to the remote — one owner covers every push, branch and tag alike |
+| `merge` | merge the release branch into the branch it was cut from |
+| `pull_request` | open a pull request instead of merging |
+| `tag` | create the version tag |
+
+That order is the release order, and `merge` and `pull_request` occupy the same position in it:
+both are integration, and only one may be active.
+
+Each stage takes one of three values:
+
+| Value | Meaning |
+|---|---|
+| `none` | it does not happen |
+| `agent` | the release coordinator performs it |
+| `human` | the session **stops**, states exactly what to run, waits for explicit confirmation, **verifies it landed**, and continues |
+
+**`agent` names who acts — the AI rather than the human.** It does not mean a sub-agent is
+spawned. The release coordinator is a persona `/work-release` adopts, and there is never a
+`release-manager` agent on any project. Note that `<testing.agent>` uses the word in its other
+sense, naming a roster member; these do not interact.
+
+### Validity
+
+Check all of these before acting. Report every failure at once.
+
+| Rule | Why |
+|---|---|
+| `commit: human` forces every **later** stage to `human` or `none` | Nothing downstream works without commits. This is the total-handoff shape. |
+| `commit: none` is invalid | A release that commits nothing is not a release. |
+| `merge` and `pull_request` may not both be active | They are two answers to one question. |
+| Either requires `branch` to be active | There is nothing to integrate otherwise. |
+| `pull_request` additionally requires `push` to be active | A pull request needs a remote branch. |
+| `tag: none` requires `<version.file>` to be set | Otherwise the version has nowhere to live. |
+| `<vcs.system>` is `none` → every stage must be `none` | There is no repository to act on. |
+| Any stage is `human` → `/work-crunch` refuses | An unattended loop cannot wait. |
+
+**Tagging before a pull request merges is not supported and is not configurable.** With
+`pull_request` active, the tag stage runs only after the merge has landed — which, because
+integration precedes tagging in the order above, is what a `human`-owned `merge` already
+produces. A tag created at PR time points at a commit that may never reach the base branch, or
+that a squash or rebase rewrites out from under it.
+
+### Handing off a human stage
+
+At a `human` stage, stop and give the exact command to run — the real branch name, the rendered
+tag, the actual base — not a description of the action. Then wait. Do not proceed on an
+assumption, a "will do", or silence.
+
+**Verify before continuing.** A human stage followed by an `agent` stage is a boundary where
+the agent is about to build on work it did not do, so confirm it actually happened:
+
+| After | Verify |
+|---|---|
+| `branch` | the branch exists and is checked out |
+| `commit` | the working tree is clean for the project's paths |
+| `push` | the ref is on the remote — `git ls-remote` |
+| `merge` | the base contains the release commits |
+| `pull_request` | the PR exists and is open |
+| `tag` | the tag exists and points where expected |
+
+**Collapse consecutive human stages into one handoff.** `merge`, `tag` and `push` all owned by
+the human is one instruction at the end, not three waits. Only an `agent` stage sitting between
+two `human` ones forces a genuine mid-session stall — say so at the start of the release rather
+than surprising the human at the point it happens.
+
+**A human-owned final stage still completes the release.** Once the last stage is confirmed and
+verified, mark the release `released` in the same session. Requiring a second run to move the
+status line leaves it sitting at `ready-for-release` indefinitely whenever the human does not
+come back, and that line is the release's external interface.
+
 ## VCS scoping protocol
 
 `<scope.root>` changes how git is used, not whether it is used. Git itself is unaffected by
@@ -151,7 +240,8 @@ the boundary — it walks up to find `.git` from any subdirectory, so a session 
 `apps/toolA` has full access to commit, tag, branch and push. What changes is the pathspec
 every command must supply.
 
-Skip this whole section when `<vcs.system>` is `none`, and when `<vcs.owner>` is `human`.
+Skip this whole section when `<vcs.system>` is `none`. Where a stage is `human`-owned, the
+scoping below is what you put in the handoff instruction rather than what you run yourself.
 
 **Scope every status and diff check to the project.** A repo-wide `git status --porcelain`
 reports another member's uncommitted work as this project's dirt, which turns a clean-tree
@@ -236,7 +326,8 @@ the session:
 | `CHANGELOG.md` | `<paths.changelog>` (skip the step entirely if null) |
 | `REQ-` / `WORK-` | `<ids.request_prefix>-` / `<ids.work_prefix>-` |
 | a hardcoded agent name | a `name` from `<agents>` |
-| "the human tags the release" | the behaviour implied by `<vcs.system>` and `<vcs.owner>` |
+| "the human tags the release" | `<vcs.stages.tag>` — and each other stage separately |
+| a single "who owns git" answer | six stage values; there is no global owner |
 | a restated rule about what needs tests | read `<testing.policy_document>` |
 | assuming the project is under git | `<vcs.system>` — it may be `none` |
 | assuming the project is the whole repository | `<scope.root>` — it may be one member of many |
