@@ -103,17 +103,26 @@ Follow `<vcs.owner>`:
   what it was cut from, so the base is on the record.
 
 **Do not run a git command to check the working tree when `<vcs.owner>` is `human`.** The
-repository may not be reachable at all: where a session is scoped to a subdirectory — one app
-inside a monorepo — `.git` sits above that boundary, and git reports `not a git repository`
-rather than a clean tree. That error is not a blocker and not a misconfiguration; it is the
-expected result of not being able to see the repository. The human's confirmation is the
-authority here regardless, so rest on it and continue.
+repository may not be reachable at all: where a session is sandboxed to a subdirectory, `.git`
+sits above that fence and git reports `not a git repository` rather than a clean tree. That
+error is not a blocker and not a misconfiguration; it is the expected result of not being able
+to see the repository. The human's confirmation is the authority here regardless, so rest on
+it and continue.
 
 Where `<vcs.owner>` is `command`, git is reachable by definition — it just created the branch —
-so confirm the working tree before continuing. Note that a repo-wide `git status` also reports
-changes belonging to other projects in the same repository: read that output rather than
-treating any dirt as this release's problem, and scope the check to the manifest's own
-directory where you can.
+so confirm the working tree before continuing. **Scope the check to the project root** per the
+VCS-scoping protocol in `config-resolution.md`:
+
+```
+git status --porcelain -- <project root>
+```
+
+Where `<scope.root>` is set this is not a nicety. A repository holding several apps reports
+another member's uncommitted work as dirt, and on a machine where the same monorepo is checked
+out twice — one clone per app — that other member is very likely being edited right now. An
+unscoped check turns a clean-tree precondition into a blocker nobody in this session can clear.
+Add any `<scope.writes_outside>` paths to the pathspec, since those are this release's to
+change too.
 
 ## Step 2b — Commit the work files, then write the version
 
@@ -125,6 +134,11 @@ in Step 7 covers those files instead. Otherwise commit `<paths.work>/active-rele
 `<paths.work>/backlog.yml` and `<paths.work>/requests.md`, naming those paths explicitly and
 committing no others, so that unrelated dirt elsewhere in the repository stays where it is.
 If they are already clean, say so and move on.
+
+**`git add -A`, `git add .` and `git commit -a` are forbidden here and everywhere else in this
+command when `<scope.root>` is set.** Each one stages whatever another member happens to have
+in the tree, and the result is a release commit carrying another app's half-finished work
+under this app's version number. Name every path.
 
 They are usually dirty here because `/work-plan` wrote them and planning does no committing
 of its own: the proposal, the refined work items and their request statuses are sitting
@@ -153,6 +167,10 @@ path in `<version.mirrors>`.
   member versions are independent, so finding other version-bearing files in the tree is not
   licence to update them. If you think a file outside the list should be included, say so and
   let the human amend the manifest — do not decide it mid-release.
+- **Confirm each resolved path is inside the project root** before writing it, or matches an
+  entry in `<scope.writes_outside>`. A `mirrors` entry that escapes the boundary is a
+  misconfiguration to report, not a write to perform: on a monorepo it means this release is
+  about to renumber another app.
 - Report every file changed, with its old and new value. On a workspace monorepo a partial
   bump is a confusing state to inherit.
 - **Note the previous value explicitly in your report.** The version is bumped before the
@@ -208,7 +226,13 @@ Each brief must contain:
 
 - the work item ID and title;
 - what to build and why;
-- which paths to touch, bounded by that agent's `owns` list minus its `excludes`;
+- which paths to touch, bounded by that agent's `owns` list minus its `excludes`, each one
+  resolved to a real path against the project root rather than passed on as the manifest's
+  shorthand — an agent given `src` in a monorepo has been told almost nothing;
+- **the project root as a hard boundary**, where `<scope.root>` is set: name it, say nothing
+  outside it may be written, and list `<scope.writes_outside>` if it has entries. This is
+  worth stating even though the generated agent file already carries it, because a spawned
+  agent works from its brief first;
 - the acceptance criteria, quoted from `backlog.yml`;
 - architectural constraints from Step 3, and dependencies on other items;
 - the condition of done, including whether a passing test is part of it per
@@ -289,6 +313,24 @@ branch, or a working-tree check, and do not tell the user to run one.
 
 You, as Release Coordinator, perform the release:
 
+0. **Render the tag name, and check it before you use it.** Build it from
+   `<version.tag_template>` per the tag rules in
+   `${CLAUDE_PLUGIN_ROOT}/skills/work-model/references/config-resolution.md`. Then, in one
+   report before any tagging happens:
+
+   - Where `<scope.root>` is set and `<version.tag_template>` is null, warn that this release
+     is claiming the repository's global `v<version>`, which the next member to reach that
+     number cannot also claim. Offer to set the field. Do not refuse to tag — the human may
+     have a convention that works — but do not let it pass silently either.
+   - Where `<release.pipeline.definition>` names a file and `<release.pipeline.trigger>` is
+     `tag-push`, read that file and compare its tag filter against the rendered tag. A
+     workflow watching `v*` does not fire on `toolA/v1.2.3`. **Report a mismatch before
+     tagging, not after.** A tag that succeeds and triggers nothing produces a release that
+     looks shipped and never built, which is discovered days later by someone wondering why
+     the deploy is stale.
+   - `git tag --list <rendered tag>` to confirm the name is free. On a shared repository it
+     may not be, and the failure is more legible now than mid-push.
+
 1. If `<release.changelog>` is `required`, update `<paths.changelog>` before tagging. Skip
    if `<paths.changelog>` is null and say so.
 2. Finish according to `<vcs.branching>`. The version files were committed in Step 2b — do
@@ -302,14 +344,20 @@ You, as Release Coordinator, perform the release:
      the resulting commit, and push that branch and the tag. Delete the release branch once
      the merge is pushed. If the base branch is not one you can merge into, stop and hand the
      merge to the human rather than forcing it.
+
+     **Fetch the base before merging into it**, and say whether it had moved. Where the same
+     repository is checked out more than once — a second clone, or a `git worktree`, which is
+     the usual arrangement when two of its apps are worked in parallel — this checkout's copy
+     of the base branch can be well behind, and merging onto a stale ref quietly produces a
+     release built on a tree nobody has.
    - **`pr`** — commit any final changes on the release branch, push it, and open a pull
      request into the branch it was cut from (`gh pr create` if available; otherwise give the
      human the title, body and branch name). **Stop there — do not tag.** A merge via PR is a
      human action whose timing you do not control. Record that the PR is open, leave
      `Status: ready-for-release`, and say that re-running `/work-release` after the merge
      completes the tag.
-3. If `<version.file>` is null, the tag is the version of record — create it per
-   `<version.scheme>` using the number confirmed in Step 2.
+3. If `<version.file>` is null, the tag is the version of record — create it with the name
+   rendered in step 0, from the number confirmed in Step 2.
 4. Report what happens next automatically — see the pipeline rules below. Under `pr` this
    applies only once the PR has merged; say so rather than implying it fires now.
 5. List `<release.deploy_steps>` as the human's remaining actions. Under `pr` these follow
@@ -319,8 +367,14 @@ You, as Release Coordinator, perform the release:
 
 You do not touch the repository. Run no git command, create no branch, make no commit,
 write no tag, open no pull request. Hand off with an ordered list drawn from
-`<version.scheme>`, `<version.file>`, `<release.changelog>`, `<paths.changelog>`,
-`<vcs.branching>`, and `<release.deploy_steps>`.
+`<version.scheme>`, `<version.tag_template>`, `<version.file>`, `<release.changelog>`,
+`<paths.changelog>`, `<vcs.branching>`, and `<release.deploy_steps>`.
+
+**Give the tag as its literal rendered name** — `toolA/v1.2.3`, not "tag the release" —
+because that string is the whole of what `<version.tag_template>` exists to get right, and a
+handoff that leaves it to be reconstructed is where a repository-global `v1.2.3` gets created
+by hand on a monorepo. Where the template is null and `<scope.root>` is set, say that too, so
+they can decide whether the bare name is what they want.
 
 Name the work files under `<paths.work>` in that list, alongside the code and the version
 files. `active-release.md`, `backlog.yml` and `requests.md` all carry uncommitted changes —
@@ -401,7 +455,20 @@ Finish by telling the human that `/work-plan` closes the release out in the plan
   uncommitted one has not moved.
 - Never commit the work files by a repo-wide `git add`. Name `active-release.md`,
   `backlog.yml` and `requests.md` by path — a monorepo holds other projects' changes, and
-  they are not this release's to sweep up. The same holds for the version files.
+  they are not this release's to sweep up. The same holds for the version files. Where
+  `<scope.root>` is set, `git add -A`, `git add .`, `git add :/` and `git commit -a` are
+  forbidden outright.
+- Never write outside the project root. Every file this command or any agent it spawns
+  touches must resolve under `<scope.root>`, or match an entry in `<scope.writes_outside>`.
+  If the release appears to need a write beyond that, stop and say so — the fix is a manifest
+  entry the human adds deliberately, never a judgement call made mid-release. On a monorepo
+  the directory next door is another team's app, quite possibly being edited in another
+  checkout at this moment.
+- Never run an unscoped `git status` when `<scope.root>` is set. It reports another member's
+  work as this release's, which is either a false blocker or, worse, dirt that gets swept
+  into a commit.
+- Never create a tag without rendering it through `<version.tag_template>` and checking it
+  against the pipeline's trigger filter first.
 - Never let the Step 2b version bump share a commit with implementation work, and never
   defer it until ship time. It is the release's rollback anchor, which requires it to be
   both isolated and first.

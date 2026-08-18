@@ -29,7 +29,8 @@ If no manifest exists, stop: there is nothing to migrate. Direct to `/work-init`
 **Preflight per `vcs.system`** — read it directly from the file, defaulting to a `.git` check if
 the block does not exist (era A manifests have no `vcs:`):
 
-- **git** — check the tree is clean with `git status --porcelain`. Read-only git only. A dirty
+- **git** — check the tree is clean with `git status --porcelain`, scoped to the directory
+  holding the manifest where that is not the repository root. Read-only git only. A dirty
   tree is not a hard stop, but say the migration rewrites `project.yml` and a clean baseline
   makes the change reviewable as a single diff.
 - **none** — copy the manifest to `.work-migrate-backup-<YYYYMMDD-HHMM>/` before writing.
@@ -63,6 +64,48 @@ distinction matters more than the mechanics:
 **Needs a decision** — a new field with no correct default, or an old field whose replacement
 means something different. Never fill these in silently. The known ones:
 
+- **`scope.root`** (era D onward) — whether this project is the whole repository or one member
+  of it. **Establish the evidence before asking.** Run `git rev-parse --show-toplevel` and
+  compare it with the directory the manifest's project sits in:
+
+  - **The manifest is at the repository root.** Propose `root: null` and move on. This is the
+    overwhelmingly common case, it preserves era D behaviour byte for byte, and turning it
+    into a question makes a non-decision look like one.
+  - **The manifest is below the repository root.** This project has been managed as though it
+    were a whole repository while actually being a member. Say what you found, name the
+    proposed `scope.root`, and ask whether the repository holds other projects this one must
+    not touch — because the answer is genuinely either way, and a project can live in a
+    subdirectory of a repository it nonetheless owns entirely.
+
+    Where the answer is yes, **the paths need stripping as well as the root adding.** Era D
+    paths are repository-relative, era E paths are project-relative, so `paths.work:
+    apps/toolA/docs/work` becomes `docs/work`. Present the full before/after list for every
+    affected field — `paths.*`, `project.primary_reference`, `project.domain_rules`,
+    `version.file`, `version.mirrors`, `testing.policy_document`,
+    `release.pipeline.definition`, and every agent's `owns`, `excludes`, `reads` and `stack`
+    — and get approval on the list as a whole. A path that does not start with the `scope.root`
+    prefix is the interesting case: it points outside the new boundary and needs either a
+    leading slash to anchor it to the VCS root (right for a shared CI workflow) or a
+    `writes_outside` entry (right for a file the project genuinely writes). Ask which, per
+    path. Do not strip silently and do not guess — a wrong root here breaks every ownership
+    table at once.
+
+- **`scope.writes_outside`** — empty unless the path review above turned up a file outside the
+  new boundary that this project writes. Never add an entry speculatively.
+- **`scope.agents_dir`** — `project` unless `scope.root` is null, where it is inert. Mention
+  that the roster will move to `<scope.root>/.claude/agents/` when `/work-init --repair` next
+  runs, and that agent names gain the project slug as a prefix.
+- **`version.tag_template`** — `null` where `scope.root` is null; that is the historical
+  behaviour and needs no thought. Where `scope.root` is non-null, **do not default it.** Run
+  `git tag --list --sort=-creatordate`, show the recent tags, and ask. If they already carry a
+  member prefix the answer is to match that convention. If they do not, say plainly that a
+  bare `v1.2.3` is a repository-global name that the next member to reach that version cannot
+  claim, and propose `{slug}/v{version}`.
+
+  Where `release.pipeline.definition` names a workflow with `trigger: tag-push`, read it and
+  compare its tag filter against what the proposed template renders, in the same exchange. A
+  workflow watching `v*` will not fire on `toolA/v1.2.3`.
+
 - **`version.mirrors`** — which other version-bearing files a release should keep in step. Search
   the tree for every `package.json`, `pyproject.toml`, `Cargo.toml`, `*.csproj` and `VERSION`
   file, excluding dependency and build directories. Present the list with each current value and
@@ -86,6 +129,9 @@ Show, before writing:
 - the era detected and the evidence;
 - every mechanical change as `old.key -> new.key`, with the value carried;
 - every decision, with your recommendation and the options;
+- **every path whose resolution changes**, as a before/after list, where `scope.root` ends up
+  non-null. This is the one change a reader cannot infer from the key names, because the keys
+  do not move — their meaning does;
 - any field being removed, and where its content should go instead;
 - the backup location under `vcs.system: none`.
 
@@ -125,6 +171,9 @@ Re-read the file and confirm:
 - it satisfies the shape cross-check in `config-resolution.md`;
 - every value from the original is present somewhere — compare key by key against what you read
   in Step 1, and account for anything that has gone;
+- **every path resolves to a file or directory that exists**, applied against the project root
+  per the new rules. This catches a mis-stripped prefix immediately, where leaving it would
+  surface later as an agent that mysteriously owns nothing;
 - comment count has not dropped except where Step 4 authorised a removal;
 - no `TODO` or placeholder remains where a decision was supposed to be answered.
 

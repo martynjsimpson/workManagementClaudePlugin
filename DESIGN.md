@@ -130,6 +130,45 @@ identically. It asks about anything with no correct default (`version.mirrors` e
 rather than filling it in. Run `/work-migrate` directly instead when you want that edit
 reviewed on its own, before anything touches the agent files.
 
+## The project root and the VCS root are different things
+
+The model originally assumed a project *was* a repository, and every path was relative to the
+repository root. That holds right up until the project is one app in a monorepo, at which
+point the assumption fails everywhere at once: a clean-tree check reports a sibling app's
+uncommitted work as your dirt, `/work-init` offers thirty `package.json` files to pick a
+version from, every ownership path carries an `apps/toolA/` prefix, and `v1.2.3` is a name
+the whole repository shares.
+
+Those look like six problems. They are one — two roots being treated as one — so `scope.root`
+names the second root and the rest follows from it. When it is null the two coincide and
+nothing changes, which is why existing manifests needed no path rewriting to reach schema 4.
+
+**Paths resolve against the project root, not the repository root**, with a leading slash
+escaping upward as it does in `.gitignore`. The alternative — keeping paths
+repository-relative and letting each carry the prefix — was rejected because it makes the
+manifest non-portable for no gain: under the chosen rule a member's manifest is byte-identical
+to the standalone version of itself, and lifting the app into its own repository changes one
+line.
+
+**Writes are fenced; reads are not.** An allowlist for reads would be constant friction —
+building against a shared package means reading it — while contributing nothing, since reading
+a sibling app harms nobody. Writing to one is the actual hazard, particularly when that
+sibling is checked out somewhere else and being edited right now.
+
+**Blacklisting was the obvious alternative and is the wrong shape.** A denylist of sibling
+apps is open-ended: it has to enumerate every peer, and it silently stops being correct the
+day someone adds another. An allowlist anchored on one root is closed and stays correct
+without maintenance — the same reasoning that makes agent ownership `owns` plus `excludes`
+rather than a global ignore list.
+
+**A repository-global namespace needs project-local names.** Tags, branches and commits all
+live in a namespace shared with every other member, which is why release branches were already
+slugged and why `version.tag_template` now exists. The trap worth naming: namespacing a tag can
+silently disable the release pipeline, because a workflow watching `v*` does not fire on
+`toolA/v1.2.3`. That produces a release that tags cleanly, builds nothing, and looks shipped —
+so both `/work-init` and `/work-release` read the workflow file and cross-check its filter
+against the template before anything is tagged.
+
 ## Version control is optional
 
 `vcs.system: none` is a first-class configuration, not a degraded one. Every VCS step is then

@@ -25,6 +25,29 @@ This document describes only the parts that are the same on every project.
 Values written as `<key>` below are manifest lookups. Never substitute a literal path,
 project name, or agent name from memory.
 
+## A project is not always a repository
+
+The model manages **a project**, which may be a whole repository or one member of a larger
+one — an app in a monorepo, a package in a workspace. `<scope.root>` says which: null for a
+whole repository, a path like `apps/toolA` for a member.
+
+Two roots follow from that, and they are not the same thing:
+
+- the **VCS root**, where `.git` lives. Branches, tags, pushes and merges are repository-wide
+  by nature and happen here.
+- the **project root**, where this project's world begins and ends. Every path in the manifest
+  resolves against it, and nothing writes outside it.
+
+Where a project is a whole repository the two coincide, which is why the distinction can go
+unnoticed for a long time and then matter all at once. `config-resolution.md` holds the
+resolution rules, the write boundary, and the git scoping that follows; read it before
+resolving a path or running a git command.
+
+The consequence for the model itself is small but real: **the durable record is repository-wide
+while the work is not.** A tag, a branch name and a commit all live in a namespace shared with
+every other member, so each must carry something that identifies this project — which is why
+release branches are slugged and `<version.tag_template>` exists.
+
 ## Files
 
 ```text
@@ -315,6 +338,8 @@ lapsed. That is a maintenance signal, not a normal state.
 5. Completion metadata is separate from status (`Status: done` + `Done in:`).
 6. Version assignment follows `<version.owner>`; version-control actions follow
    `<vcs.system>` and `<vcs.owner>`. These are independent, and none is decided per session.
-7. If a work item is uncertain, its first action is audit or clarification, not
+7. Nothing is written outside the project root unless `<scope.writes_outside>` authorises
+   that exact path. Reads are unrestricted.
+8. If a work item is uncertain, its first action is audit or clarification, not
    implementation.
-8. Keep the model small.
+9. Keep the model small.

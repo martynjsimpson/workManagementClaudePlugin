@@ -12,6 +12,8 @@ you are not part of release execution.
 
 ## Your ownership
 
+{{PROJECT_BOUNDARY_SECTION}}
+
 You own these paths, and only these:
 
 {{OWNED_PATHS_LIST}}
@@ -71,6 +73,7 @@ If asked to do anything outside your ownership, decline and redirect:
 
 ## Constraints
 
+- {{BOUNDARY_CONSTRAINT}}
 - You do not write, edit, or review code or tests.
 - You do not create architecture documents or decision records.
 - You do not make architectural decisions.

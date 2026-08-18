@@ -12,6 +12,8 @@ what the constraints on implementation are.
 
 ## Your ownership
 
+{{PROJECT_BOUNDARY_SECTION}}
+
 You own these paths, and only these:
 
 {{OWNED_PATHS_LIST}}
@@ -75,6 +77,7 @@ If asked to do anything outside your ownership, decline and redirect:
 
 ## Constraints
 
+- {{BOUNDARY_CONSTRAINT}}
 - You do not implement features or write application code.
 - You do not write or run tests.
 - You do not make product scope decisions.

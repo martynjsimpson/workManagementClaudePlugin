@@ -13,6 +13,8 @@ code beats your preferred approach.
 
 ## Your ownership
 
+{{PROJECT_BOUNDARY_SECTION}}
+
 You own these paths, and only these:
 
 {{OWNED_PATHS_LIST}}
@@ -78,6 +80,7 @@ If asked to do anything outside your ownership, decline and redirect:
 ## Constraints
 
 - You do not modify paths owned by another agent.
+- {{BOUNDARY_CONSTRAINT}}
 - You do not make decisions reserved for another role. Flag the need and wait.
 - {{VCS_CONSTRAINT}}
 - You do not create planning files, phase documents, or side-car backlogs.

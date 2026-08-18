@@ -14,12 +14,41 @@ content as the thing to be protected, not as an obstacle.
 
 ## Step 0 — Preflight
 
-**Establish whether the project is under version control.** Check for a `.git` directory,
-then confirm with `git rev-parse --is-inside-work-tree`. Read-only git only — never `add`,
-`commit`, `checkout`, `stash`, or anything else that mutates state.
+**Establish whether the project is under version control.** Run
+`git rev-parse --is-inside-work-tree`, then `git rev-parse --show-toplevel` to find the VCS
+root. Read-only git only — never `add`, `commit`, `checkout`, `stash`, or anything else that
+mutates state. Do not test by looking for a `.git` directory in the current folder: a project
+inside a monorepo legitimately has its repository several levels above, and that test reports
+"no version control" on a repository that plainly has one.
 
-**If it is a git repository**, check the working tree is clean with
-`git status --porcelain`:
+**Establish the project boundary before anything else.** Compare the VCS root with the
+directory this command is running in.
+
+- **Same directory** — the ordinary case. The project is the repository, `scope.root` will be
+  null, and nothing else in this step changes.
+- **Different** — the current directory sits inside a larger repository. Do not assume either
+  way what that means; a project can legitimately live in a subdirectory of a repository it
+  nonetheless owns entirely. Look for siblings: list the entries beside the current directory
+  and check whether any is a plausible peer project — its own dependency manifest, its own
+  source tree. Then ask:
+
+  > This directory sits inside a repository rooted at `<VCS root>`. Is `<current dir>` the
+  > whole of what I should manage, or does the repository hold other projects I must not
+  > touch?
+
+  Their answer sets `scope.root`: the path from the VCS root to the current directory when
+  the project is one member of several, null when the repository is theirs entirely and they
+  just happen to be standing in a subdirectory of it.
+
+Carry the answer through the whole session. Where `scope.root` will be set, **every survey,
+every scan and every git command below is scoped to the project root** — read the two-roots
+and VCS-scoping sections of
+`${CLAUDE_PLUGIN_ROOT}/skills/work-model/references/config-resolution.md` now rather than
+improvising the scoping per step.
+
+**If it is a git repository**, check the working tree is clean with `git status --porcelain`
+— scoped to the project root where `scope.root` will be set, so another member's uncommitted
+work is not reported as this project's:
 
 - **Clean:** continue, and tell the user that everything this command writes will therefore
   show as a reviewable diff they can discard wholesale.
@@ -65,8 +94,11 @@ where the durable record of a release lives.
 normally up to the point of writing, then instead:
 
 - print the manifest you would write, in full;
+- state the project root, the VCS root, and the roster directory the manifest resolves to —
+  as literal paths, so a wrong `scope.root` is visible here rather than after every file has
+  been written against it;
 - list every file you would **create**, **modify in place**, **regenerate over**, and **skip**
-  — as four separate lists, not one;
+  — as four separate lists, not one, each as a full path from the repository root;
 - state where backups would go and which files they would cover;
 - render **one complete agent file** — pick the one with the most complex scope table — so
   the user can see actual generated output rather than a summary of it;
@@ -148,33 +180,49 @@ This step is reached only from Step 1's "No manifest" branch — every other bra
 straight to Step 5. Before asking anything, survey the repository so the interview asks
 about real things rather than hypotheticals. Look for:
 
+**Scope every search below to the project root**, not the VCS root, where Step 0 established
+a boundary. Surveying the whole monorepo turns a ten-item question into a hundred-item one and
+invites the human to pick another member's file by mistake. The two exceptions are called out
+where they arise: the pipeline definition and the tag convention are repository-wide facts and
+must be looked for above the boundary.
+
 - a dependency manifest (`package.json`, `pyproject.toml`, `go.mod`, `*.csproj`,
   `Cargo.toml`, `pom.xml`);
-- **every version-bearing file** — search the whole tree, not just the root. Look for a
-  `version` field in any `package.json`, `pyproject.toml`, `Cargo.toml`, or `*.csproj`, and
-  for any plain `VERSION` file. Exclude `node_modules`, `dist`, `build`, `.venv`, and
-  anything else the project ignores.
+- **every version-bearing file** — search the whole project tree, not just its top level.
+  Look for a `version` field in any `package.json`, `pyproject.toml`, `Cargo.toml`, or
+  `*.csproj`, and for any plain `VERSION` file. Exclude `node_modules`, `dist`, `build`,
+  `.venv`, and anything else the project ignores.
 
-  **Do not stop at the first hit.** A workspace monorepo has a manifest per member —
-  `frontend/`, `backend/`, `shared/` — and treating the root as the only one is wrong in
+  **Do not stop at the first hit.** A workspace has a manifest per member —
+  `frontend/`, `backend/`, `shared/` — and treating the top level as the only one is wrong in
   both directions: it misses files a release should bump, and it silently assumes members
-  track the root version when they may be independent or unversioned.
+  track the top-level version when they may be independent or unversioned.
 
   Record every file found and its current value. You will ask which is the version of
   record and which, if any, are mirrors;
 - the top-level source directories;
 - an existing docs tree, and a changelog;
 - **a pipeline definition** — `.github/workflows/*.yml`, `.gitlab-ci.yml`, `Jenkinsfile`,
-  `azure-pipelines.yml`, `.circleci/config.yml`, `bitbucket-pipelines.yml`. Where you find
-  one, read it: identify what triggers it (a tag push, a branch push, manual dispatch) and
-  what it produces. Offer the file path as `release.pipeline.definition` rather than
-  transcribing its behaviour into the manifest — the path stays accurate as the workflow
-  evolves, a transcription does not;
+  `azure-pipelines.yml`, `.circleci/config.yml`, `bitbucket-pipelines.yml`. **Look at the VCS
+  root as well as the project root**: CI configuration is usually repository-wide even when
+  the project is not, and a monorepo member's release almost always runs from a workflow
+  defined above it. Where the definition sits outside the project root, offer it with a
+  leading slash — `/.github/workflows/release.yml` — so it resolves against the VCS root.
+
+  Where you find one, read it: identify what triggers it (a tag push, a branch push, manual
+  dispatch) and what it produces. On a shared workflow, note **which tag or branch patterns it
+  filters on** — that is what Step 2's tag question has to match. Offer the file path as
+  `release.pipeline.definition` rather than transcribing its behaviour into the manifest —
+  the path stays accurate as the workflow evolves, a transcription does not;
+- **the repository's tag convention**, where `scope.root` will be set. Run
+  `git tag --list --sort=-creatordate` and look at the most recent twenty. If they carry a
+  member prefix — `toolA/v1.2.3`, `toolA-v1.2.3` — that is the convention this project must
+  follow, and you will offer it as `version.tag_template` rather than inventing one;
 - **a testing policy statement** — check `README.md`, `TECHNICAL_ARCHITECTURE.md`,
   `AI.md`, `CLAUDE.md`, `CONTRIBUTING.md`, and any `docs/testing*`. You are looking for
   where the project already says what needs test coverage;
 - a data-model or schema file;
-- any existing `.claude/agents/` files.
+- any existing agent files — check `.claude/agents/` at the project root and, where a boundary exists, at the VCS root too, since an earlier setup may have put them either side of it.
 
 Note what you found — you will offer it as defaults.
 
@@ -187,9 +235,43 @@ Cover, in this order:
 
 1. **Project name and one-line description.** The description goes into every generated
    agent prompt, so it must say what the thing *is*, not what it does well.
+
+1a. **The boundary**, but only where Step 0 established one. Skip this group entirely when
+   `scope.root` will be null — on an ordinary repository there is nothing here to decide, and
+   asking makes a non-question look like a decision.
+
+   Confirm `scope.root` as the path Step 0 arrived at, then ask the two things that follow
+   from it:
+
+   - **Anything outside the boundary this project must be able to write.** Default to nothing,
+     and mean it: this is the field that keeps a release from touching a sibling app, so an
+     entry added "just in case" removes the protection the block exists for. A root
+     `CHANGELOG.md` the project appends to, or a shared registry file it must register itself
+     in, are the kinds of thing that qualify. Reading is not restricted, so do not collect
+     read paths here — say that explicitly, because the natural instinct is to list every
+     shared package the project builds against.
+   - **Where the agent roster should live** (`scope.agents_dir`). Recommend `project` —
+     `<scope.root>/.claude/agents/` — with the reason: it keeps the member self-contained, and
+     it is found when the session starts in the project directory, which is how a monorepo
+     member is meant to be worked. Offer `repo` for a human who always starts Claude Code at
+     the repository root instead. Say plainly that this is about **where the files are
+     discovered from**, and if the roster later fails to load, this is the field to change.
+
+   Then state, once, the thing that most needs saying and is easiest to get wrong: **git does
+   not need the session to start at the repository root.** It walks up to find `.git` by
+   itself, so working from `<scope.root>` gives full commit, branch, tag and push while
+   keeping every file operation inside the project. Starting at the repository root to "get
+   git working" is the mistake this whole block exists to make unnecessary.
+
 2. **Paths.** Where the work files, spikes, architecture docs, decision records, product
    docs, and changelog live. Offer the detected docs layout. Any of architecture,
    decisions, product, and changelog may be null.
+
+   **Where `scope.root` is set, offer these relative to the project root** —
+   `docs/work`, not `apps/toolA/docs/work`. Say so when you present them, because the
+   detected paths were found as full repository paths and a human reading `docs/work` on a
+   monorepo will reasonably wonder which `docs/work` is meant. Use a leading slash only for
+   something that genuinely lives above the boundary, such as a repository-wide changelog.
 3. **The product truth source.** The single document agents align planned work to. If
    none exists, say so plainly — the model works without one, but `/work-plan` will have
    nothing to check scope against, and that is worth the human knowing now.
@@ -223,6 +305,25 @@ Cover, in this order:
    version, some are `private` with a placeholder version that must not be touched. Present
    the list and let the user say. If they choose no mirrors, confirm that releases will touch
    only the one file, so the choice is on the record rather than a default nobody saw.
+
+   - **The tag name** (`version.tag_template`), where `vcs.system` is `git`. Skip this on a
+     project whose `scope.root` is null unless the survey found a tag convention that a bare
+     version would break — the default renders `v1.2.3` and that is nearly always right.
+
+     **Where `scope.root` is set, ask it every time and do not offer null as the
+     recommendation.** A tag name is repository-global: the moment two members both reach
+     1.2.3, the second cannot tag. Offer the convention the survey found in the existing tag
+     list as the recommended option, since a repository that already tags `toolA/v1.2.3` has
+     settled this question and the answer is to match it. Where no convention exists, propose
+     `{slug}/v{version}` and say what it will render as.
+
+     **Then cross-check the pipeline, in the same exchange.** If
+     `release.pipeline.definition` names a workflow with `trigger: tag-push`, compare its tag
+     filter against what the chosen template renders. A workflow watching `v*` will not fire
+     on `toolA/v1.2.3`. Where they disagree, say so before the answer is recorded and name
+     both fixes — widen the workflow's filter, or match the template to it — because a
+     release that tags cleanly and builds nothing is the one failure here nobody notices until
+     much later.
 
    Mention the timing, because it affects the answer: `/work-release` writes the version at the
    **start** of a release, right after scope and number are confirmed, so everything built
@@ -258,6 +359,18 @@ Cover, in this order:
    plus a product-manager and, if the project has architecture or decision docs, a
    principal-architect. For each: name, role title, model, and the paths it owns.
    Ownership must not overlap.
+
+   **Where `scope.root` is set**, two things differ. Express `owns`, `excludes` and `reads`
+   relative to the project root — `src`, not `apps/toolA/src` — so the roster reads the same
+   as it would in a standalone repository. And **prefix every agent name with the project
+   slug**: `toola-backend-developer`, not `backend-developer`. Two members of one repository
+   will otherwise both propose a `backend-developer`, and the failure that produces is work
+   routed to the other app's agent, which is confusing to diagnose from the symptom. Say you
+   are doing this and why; do not present it as a naming preference.
+
+   A shared package the project builds against belongs in `reads` with a leading slash —
+   `/packages/shared` — not in `owns`. Owning it would claim a directory another member
+   almost certainly also uses.
 12. **Deliberately absent roles.** Ask which common roles do *not* exist here
     (test-engineer and devops-engineer are the usual candidates), and where work aimed at
     each should be routed instead. This is not busywork: unless a role is explicitly
@@ -289,8 +402,21 @@ parent path as covering its children — `backend` covers `backend/src`. Then:
   by none, that is a gap, not a carve-out. Report it and resolve it before continuing.
 
 Also check that every path in `owns`, `excludes`, and `reads` actually exists, resolving
-globs against the tree. A typo silently produces an agent that owns nothing, and an
-`excludes` typo silently hands a path back to the wrong owner.
+globs against the tree. **Resolve them against the project root, and a leading slash against
+the VCS root**, per the two-roots rules in `config-resolution.md`. A typo silently produces an
+agent that owns nothing, and an `excludes` typo silently hands a path back to the wrong owner.
+
+**Then check the boundary**, where `scope.root` is set:
+
+- No `owns` entry may escape the project root unless the same path appears in
+  `scope.writes_outside`. An owned path outside the boundary that nothing authorised is not a
+  configuration nuance — it is a write that will be refused at the moment it is attempted,
+  halfway through a release. Stop and resolve it here.
+- Every `scope.writes_outside` entry must resolve, and must sit outside `scope.root`. An entry
+  already inside the boundary is redundant, and reads to the next person like a permission
+  that was needed once.
+- `reads` entries outside the boundary are fine and need no authorisation. Say so if the user
+  asks — the asymmetry is deliberate.
 
 Then present a compact summary before writing, split into three explicit lists so nothing
 modifies a file the user did not expect:
@@ -359,13 +485,24 @@ quietly undermines the document, and the next reader cannot tell which is curren
 
 ## Step 5 — Generate the agent roster
 
-For each entry in `<agents>`, write `.claude/agents/<name>.md` from the matching template:
+**Resolve the roster directory first.** Where `<scope.root>` is null it is `.claude/agents/`
+at the repository root, as it has always been. Where `<scope.root>` is set, it follows
+`<scope.agents_dir>`: `project` gives `<scope.root>/.claude/agents/`, `repo` gives
+`.claude/agents/` at the VCS root. Every path below means that directory.
+
+Under `agents_dir: repo` on a monorepo, that directory is shared with every other member, so
+**never regenerate over a file whose agent name is not in this manifest's `<agents>` or
+`<inactive_agents>`** — it belongs to a sibling project. The slug prefix from Step 2 is what
+keeps the two sets distinct; if you find an unprefixed file whose name collides with one you
+are about to write, stop and report it rather than overwriting another project's roster.
+
+For each entry in `<agents>`, write `<roster dir>/<name>.md` from the matching template:
 
 - `product-manager` -> `${CLAUDE_PLUGIN_ROOT}/templates/agents/product-manager.md`
 - `principal-architect` -> `${CLAUDE_PLUGIN_ROOT}/templates/agents/principal-architect.md`
 - everything else -> `${CLAUDE_PLUGIN_ROOT}/templates/agents/implementer.md`
 
-For each entry in `<inactive_agents>`, write `.claude/agents/<name>.md` from
+For each entry in `<inactive_agents>`, write `<roster dir>/<name>.md` from
 `${CLAUDE_PLUGIN_ROOT}/templates/agents/inactive-agent.md`.
 
 **Derive the scope-enforcement table — never hand-write it.** For each agent, build the
@@ -434,6 +571,10 @@ and that every file you claimed to write actually exists on disk. Report:
   answers given, and anything removed, exactly as work-migrate.md's own Step 6 specifies, ahead
   of everything below;
 - the manifest location and the key decisions it records;
+- **the boundary**, where `<scope.root>` is set: the project root, the repository root, what
+  `<scope.writes_outside>` permits, and where the agent roster landed. Add the one operational
+  consequence in a line — future sessions should start in the project directory, and git works
+  fine from there;
 - files created, files skipped because they already existed;
 - **content extracted** — what moved out of each hand-written agent file, to where, with
   line counts, so the user can confirm nothing evaporated;
@@ -467,8 +608,14 @@ skill to start capturing requests.
   found it.
 - Do not generate over a hand-written agent file until its extracted content exists in its
   new home and the user has approved the classification.
-- Read-only git only — `status`, `rev-parse`, `log`. Never `add`, `commit`, `checkout`,
-  `stash`, `reset`, or any other mutating command.
+- Read-only git only — `status`, `rev-parse`, `log`, `tag --list`. Never `add`, `commit`,
+  `checkout`, `stash`, `reset`, or any other mutating command.
+- Never write outside the project root once `<scope.root>` is established, and never propose
+  a `writes_outside` entry the human did not ask for. Every write in the list above resolves
+  under the project root by construction; if one appears not to, that is the signal a path
+  answer was given as a repository path where a project path was wanted.
+- Do not proceed past an `owns` entry that escapes the boundary without a matching
+  `writes_outside` entry.
 - Under `--dry-run`, write nothing whatsoever.
 - Do not proceed past an ownership overlap.
 - Do not invent an agent, a status, or a path that the human did not confirm.

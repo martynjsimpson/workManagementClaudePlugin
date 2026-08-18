@@ -18,6 +18,13 @@ If an argument gave a version, use it. Otherwise, read the recent version histor
 `<paths.changelog>` (or from release tags if `<paths.changelog>` is null and `<vcs.system>`
 is `git`), propose a cutoff that retains roughly the last three releases, and confirm it.
 
+**Filter the tag history by `<version.tag_template>`** where it is set. A repository's tag
+list holds every member's releases, and reading it unfiltered gives a version history
+belonging to several projects at once — which produces a cutoff that is either far too recent
+or far too old, and in both directions prunes the wrong things. Match the template's literal
+parts and read the version out of the `{version}` position; where the template is null, the
+tags are bare versions and the list is this project's alone.
+
 If no durable record exists, stop — there is nothing to prune *into*, and removing the items
 would destroy the only copy.
 
@@ -62,9 +69,9 @@ take.
 ## Step 3 — Verify the durable record before removing anything
 
 For each candidate, confirm its outcome is actually represented in `<paths.changelog>` (or,
-under `git`, in the tag history). This check is the point of the command — pruning an item
-whose delivery was never recorded loses the information permanently, and a `done` status is
-not by itself evidence that the changelog was updated.
+under `git`, in the tag history filtered per Step 1). This check is the point of the command —
+pruning an item whose delivery was never recorded loses the information permanently, and a
+`done` status is not by itself evidence that the changelog was updated.
 
 Where a candidate has no changelog representation, do not prune it. List it separately as a
 changelog gap for the human to fix first.

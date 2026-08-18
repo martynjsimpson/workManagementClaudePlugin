@@ -24,7 +24,13 @@ Read `references/config-resolution.md` and follow it. Project facts come from
 `<paths.work>/project.yml` and nowhere else. Report a missing manifest rather than
 guessing paths.
 
-**The supported schema is `model_version: 3`.** The compatibility gate in
+That document also defines **the two roots** — the VCS root where `.git` lives, and the
+project root where this project's world begins — and the path-resolution and VCS-scoping
+rules that follow from telling them apart. Read that section before resolving any path or
+running any git command; on a repository holding one project the two roots coincide and
+nothing changes, but the assumption that they always coincide is wrong on a monorepo.
+
+**The supported schema is `model_version: 4`.** The compatibility gate in
 `references/config-resolution.md` is checked before any other field, by every command. A stale
 manifest is a stop with a pointer to `/work-init --upgrade`, never an auto-migration.
 
@@ -50,7 +56,7 @@ When something looks like it needs recording, decide where it belongs:
 
 | The fact is... | It belongs in |
 |---|---|
-| true of this project only (paths, stack, agents, release mechanics, test policy) | the manifest, `project.yml` |
+| true of this project only (paths, boundary, stack, agents, release mechanics, test policy) | the manifest, `project.yml` |
 | true of the model on every project (statuses, field schemas, lifecycle) | `references/model.md` — do not edit per project |
 | a change to the manifest schema itself | `references/schema-history.md`, plus a `model_version` bump |
 | a piece of work someone wants done | `requests.md`, via the `work-capture` skill |
@@ -89,13 +95,33 @@ touched by hand, verify:
   downstream enforces one. A path excluded by one agent and owned by none is a gap. Confirm
   every `owns`, `excludes`, and `reads` path resolves against the tree; a typo produces an
   agent that owns nothing, or hands a path back to the wrong owner.
+- **Boundary coherence** — resolve every path field against the project root per
+  `references/config-resolution.md`, then confirm each one exists. A path that resolved
+  correctly under the old repository-root rule and is now missing is the signature of a
+  manifest that kept an `apps/toolA/` prefix it no longer needs; say so rather than reporting
+  five unrelated missing files. Where `<scope.root>` is set, confirm it names a directory that
+  exists and sits inside the repository, and that every leading-slash path in any agent's
+  `owns` also appears in `<scope.writes_outside>` — an owned path outside the boundary that
+  nothing has authorised is a write the boundary will refuse at the moment it is attempted.
+  Confirm each `<scope.writes_outside>` entry resolves and sits outside `<scope.root>`; an
+  entry that is already inside the boundary is redundant and reads as a permission that was
+  needed once.
+- **Tag coherence** — where `<scope.root>` is set and `<version.tag_template>` is null, flag
+  it: the project is claiming the repository's global `v1.2.3` and will collide with the next
+  member to reach that number. Where the template is set and
+  `<release.pipeline.definition>` names a file with `trigger: tag-push`, read that file and
+  confirm its tag filter actually matches what the template renders. A workflow watching `v*`
+  does not fire on `toolA/v1.2.3`, and that combination ships a release that builds nothing.
 - **Version-control coherence** — if `<vcs.system>` is `none`, then
-  `<version.file>` must be set, because a tag is not available to hold the version;
+  `<version.file>` must be set, because a tag is not available to hold the version — and
+  `<version.tag_template>` is inert, since there are no tags to name;
   `<paths.changelog>` should be set, because it is the only remaining narrative record; and
   `<vcs.owner>` and `<vcs.branching>` are inert and should not be relied on. If
   `<vcs.system>` is `git`, confirm a repository actually exists — a manifest claiming git on
-  a directory with no `.git` will make every release hand off to steps the user cannot
-  perform.
+  a directory with no repository will make every release hand off to steps the user cannot
+  perform. Test with `git rev-parse --show-toplevel`, not by looking for a `.git` directory
+  beside the manifest: on a monorepo member `.git` is legitimately several levels above, and
+  a bare directory check reports no repository on a project that has one.
 - **Hygiene** — flag if `done` items older than the most recent few releases are still
   present, which means pruning has lapsed. Suggest `/work-prune`.
 - **Schema** — `model_version` matches the supported version, *and* the file's shape agrees with

@@ -77,6 +77,10 @@ In the repository you want to manage work for:
 /work-ingest --dry-run   # backfill intake from a PRD, TODO file, code comments
 ```
 
+If the project is one app inside a larger repository, start the session in the app's own
+directory rather than at the repository root — see
+[Monorepos and partial repositories](#monorepos-and-partial-repositories).
+
 `/work-init` surveys the repo, interviews you about the things it cannot infer, writes
 `docs/work/project.yml`, scaffolds the four work files, and generates `.claude/agents/*.md`
 for your roster. It is built for repositories that already have work in them: it requires a
@@ -90,6 +94,131 @@ outstanding work — a PRD, `TODO.md`, code comments, an old planning folder. Cr
 **verifies every candidate against the codebase** before writing it, so a PRD describing a
 product that half exists doesn't produce sixty requests for features that shipped months ago.
 See [DESIGN.md](DESIGN.md#backfilling-existing-work) for how that pass works.
+
+## Monorepos and partial repositories
+
+A project managed by this plugin need not be a whole repository. It can be one app in a
+monorepo, or one package in a workspace, with siblings that belong to other people and must
+not be touched.
+
+That case turns on separating two roots the model would otherwise treat as one:
+
+| Root | What it is |
+|---|---|
+| **VCS root** | where `.git` lives. Branches, tags, pushes and merges are repository-wide by nature and happen here. |
+| **project root** | where this project's world begins and ends. Every manifest path resolves against it, and nothing writes outside it. |
+
+On an ordinary single-project repository they are the same directory and none of this
+applies. `scope.root: null` is the default, and everything behaves as it always has.
+
+### Setting it up
+
+Run `/work-init` **from the project's own directory**, not the repository root:
+
+```bash
+cd ~/dev/toolA/internal-tools/apps/toolA
+```
+
+`/work-init` compares that directory with the VCS root, notices it is inside a larger
+repository, and asks whether the repository holds other projects you must not touch. Answer
+yes and it writes:
+
+```yaml
+scope:
+  root: apps/toolA        # relative to the VCS root
+  writes_outside: []      # nothing outside apps/toolA may be written
+  agents_dir: project     # roster at apps/toolA/.claude/agents/
+```
+
+**Git does not need the session to start at the repository root.** It walks up to find `.git`
+by itself, so working from `apps/toolA` gives you full commit, branch, tag and push while
+keeping every file operation inside the app. Starting at the repository root to "get git
+working" is the thing `scope` exists to make unnecessary — and starting there finds no
+manifest anyway, since each member keeps its own.
+
+### Every path is relative to the project root
+
+`paths.work: docs/work` means `apps/toolA/docs/work`. `version.file: package.json` means
+`apps/toolA/package.json`. An agent owning `src` owns `apps/toolA/src`.
+
+**A leading slash anchors to the VCS root instead**, exactly as in `.gitignore` — for the few
+things that genuinely live above the app:
+
+```yaml
+paths:
+  changelog: CHANGELOG.md              # apps/toolA/CHANGELOG.md
+release:
+  pipeline:
+    definition: /.github/workflows/release.yml   # shared, at the repo root
+```
+
+The point is that a member's manifest reads exactly like a standalone project's. Lift
+`apps/toolA` out into its own repository and the only line that changes is `scope.root`.
+
+### What the boundary actually does
+
+- **Writes are fenced.** Nothing — no command, no spawned agent — writes outside the project
+  root unless the exact path is listed in `scope.writes_outside`. Generated agent files carry
+  the boundary as their first scope-table row.
+- **Reads are not.** Building against a shared package means reading it, so an allowlist for
+  reads would be pure friction.
+- **`git status` is scoped.** A repo-wide check reports a sibling app's uncommitted work as
+  your dirt, which turns a clean-tree precondition into a blocker nobody in the session can
+  clear. Every check is scoped to the project root instead.
+- **Sweeps are banned.** `git add -A`, `git add .` and `git commit -a` are forbidden outright
+  when `scope.root` is set. Every path is named.
+- **Surveys are scoped.** `/work-init` looks for version files inside the app rather than
+  offering you thirty `package.json` files, and `/work-ingest` sweeps the app for `TODO.md`
+  rather than ingesting another team's backlog under your IDs.
+- **Agent names are prefixed** with the project slug — `toola-backend-developer` — so two
+  members' rosters can never be confused for each other.
+
+### Tags are repository-global — namespace them
+
+This is the one thing that bites regardless of the boundary. A tag name belongs to the whole
+repository, so the first time two apps both reach 1.2.3 the second cannot tag at all:
+
+```yaml
+version:
+  tag_template: "toolA/v{version}"    # or "{slug}-{version}", or whatever the repo already does
+```
+
+`{version}` renders per `version.scheme`; `{slug}` is the project name lower-cased and
+hyphenated. `/work-init` reads your existing `git tag` list first and offers whatever
+convention the repository already follows.
+
+**Check your pipeline when you set this.** A workflow triggered on `v*` will *not* fire on
+`toolA/v1.2.3`, and a release that tags cleanly and builds nothing is the worst outcome here
+— it looks shipped. `/work-init` and `/work-release` both read the workflow named in
+`release.pipeline.definition` and cross-check its tag filter against the template before
+anything is tagged.
+
+### Working two apps at once
+
+One checkout per app is a normal arrangement, and `git worktree` does it more cheaply than a
+second clone — one object store, and worktrees structurally prevent two checkouts sharing a
+branch:
+
+```bash
+git -C ~/dev/toolA/internal-tools worktree add ~/dev/toolB/internal-tools main
+```
+
+Either way, release branches already carry the project slug (`release/toola-1.2.3`), so two
+members' releases never collide on a shared remote. What does need care is the base branch:
+`/work-release` fetches before merging and reports whether the base had moved, because the
+other checkout may have pushed since this one last looked.
+
+### Upgrading an existing project
+
+`scope` and `version.tag_template` arrive with `model_version: 4`. Existing manifests keep
+working: run `/work-init --upgrade`, and on an ordinary repository it adds `scope.root: null`
+and `tag_template: null`, which preserve current behaviour exactly.
+
+Where it finds a manifest that has been living *below* its repository root — a monorepo member
+managed as though it were a whole repository — it says so, proposes the `scope.root`, and
+offers to strip the now-redundant `apps/toolA/` prefix from every path. It shows you the full
+before/after list and will not do it silently: a wrong root breaks every ownership table at
+once.
 
 ## Commands
 
@@ -122,13 +251,15 @@ without being named.
 ## What the manifest controls
 
 - project name, one-line description, product truth source, optional domain-rules file
+- the project boundary — whether the project is the whole repository or one member of it,
+  what may be written outside it, and where the agent roster lives
 - paths for work, spikes, architecture, decisions, product docs, changelog
 - ID prefixes and padding
 - request and work item type vocabularies, priority vocabulary
 - version control: whether the project is under it at all (`vcs.system: git | none`), who
   operates it, and the branching model
 - versioning, separately: scheme, who assigns the number, which file holds the version of
-  record, and which other files are kept in step with it
+  record, which other files are kept in step with it, and the shape of the release tag
 - release mechanics: changelog requirement and manual deploy steps
 - the pipeline — as a path to its workflow definition where one exists, so `/work-release`
   reads what will actually happen rather than reciting a stale description

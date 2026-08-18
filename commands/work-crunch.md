@@ -60,12 +60,25 @@ only verification is each release's own bar plus whatever the human checks by ha
 with manual verification switched off in Step 2, an agent's self-report becomes the sole
 condition of shipping. State that plainly and require an explicit yes to continue.
 
+**Warn hard when `<scope.root>` is set and `<version.tag_template>` is null.** Every release
+in this run will claim a repository-global tag, and the whole point of an unattended loop is
+that nobody is watching when the third one collides with a sibling project's. Name the field
+and require an explicit yes.
+
+**Check the boundary is real before running unattended.** Where `<scope.root>` is set, state
+the project root and `<scope.writes_outside>` back to the human as part of Step 2's facts, and
+say that nothing in this run will write outside them. An unattended loop inside a shared
+repository is the situation where that boundary earns its keep, and it is worth the human
+seeing the exact directory rather than inferring it. Where the same repository is checked out
+more than once, say so too: another checkout may be pushing to the same base branch while this
+run merges into it.
+
 ## Step 2 — Pre-flight contract
 
 Ask everything in one exchange. The point of this command is that the human answers once,
 so do not trickle questions out across cycles.
 
-Present the current manifest values you are working from — `<vcs>`, `<version>`,
+Present the current manifest values you are working from — `<scope>`, `<vcs>`, `<version>`,
 `<release>`, `<testing>` — so the answers are given against known facts rather than
 assumptions.
 
@@ -250,6 +263,9 @@ investigated is in `<paths.spikes>` — the durable records already exist.
 - Never guess a product decision to avoid stopping. Park the question and continue.
 - Never auto-bump a major version.
 - Never mark a release `abandoned`, revert code, or restore a version. Stop and hand off.
+- Never write outside the project root, and never widen `<scope.writes_outside>` to make a
+  cycle proceed. A boundary an unattended loop can move for its own convenience is not a
+  boundary. Stop and hand it to the human.
 - Never continue past a failed verification, a fired stop condition, or a mixed-type
   release.
 - Never create a new planning file, run log, or side-car backlog.

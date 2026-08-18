@@ -84,7 +84,10 @@ happens rather than only here — `in-progress` in Step 2, `ready-for-release` a
 uncommitted status line has not moved as far as the repository is concerned, and a spike
 release is the case most likely to be read from outside the session, because there is no
 version bump or tag to signal it instead. Name the paths explicitly; never sweep the tree
-with a repo-wide `git add`.
+with a repo-wide `git add`. Where `<scope.root>` is set, `git add -A`, `git add .` and
+`git commit -a` are forbidden outright, and every path staged must resolve under the project
+root — a spike document written outside the boundary is a spike investigating someone else's
+app.
 
 ## Constraints
 

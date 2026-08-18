@@ -6,6 +6,87 @@ to `version` in [`.claude-plugin/plugin.json`](.claude-plugin/plugin.json) —
 bumping that field is what ships a new version to installed users and, via
 the release workflow, tags a GitHub Release.
 
+## [1.3.0] - 2026-08-18
+
+### Added
+
+- **Monorepo support, via a project boundary that is separate from the repository.** The model
+  assumed a project *was* a repository, and every path resolved against the repository root.
+  On a monorepo that assumption failed in six places at once: a clean-tree check reported a
+  sibling app's uncommitted work as this project's dirt, `/work-init` surveyed every member's
+  version file, every ownership path had to carry an `apps/toolA/` prefix, `/work-ingest` swept
+  another team's `TODO.md` into these IDs, `/work-prune` read a tag history belonging to
+  several projects, and `v1.2.3` was a name the whole repository shared. Those were one
+  problem — two roots treated as one — so `model_version: 4` adds a `scope:` block naming the
+  second:
+
+  - `scope.root` is the project root relative to the VCS root, or null for an ordinary
+    single-project repository, which is the default and preserves existing behaviour exactly.
+  - **Every path field now resolves against the project root**, with a leading slash anchoring
+    to the VCS root as it does in `.gitignore`. A member's manifest therefore reads
+    byte-identically to the standalone version of itself; lifting the app into its own
+    repository changes one line.
+  - `scope.writes_outside` lists the paths outside the boundary this project may write —
+    empty by default. Writes are fenced, reads are not: building against a shared package
+    means reading it, while writing to a sibling app being edited in another checkout is the
+    actual hazard.
+  - `scope.agents_dir` chooses between `<scope.root>/.claude/agents/` and the repository root,
+    and agent names gain the project slug as a prefix so two members' rosters cannot be
+    confused for each other.
+
+- **`version.tag_template`, because a tag name is repository-global.** The first time two
+  members both reach 1.2.3, the second cannot tag at all. The field takes `{version}` and
+  `{slug}` — `"toolA/v{version}"` — and defaults to null, which renders the bare version as
+  before. `/work-init` reads the existing `git tag` list and offers whatever convention the
+  repository already follows rather than inventing one.
+
+  Both `/work-init` and `/work-release` **cross-check the rendered tag against the pipeline's
+  trigger filter before anything is tagged**. A workflow watching `v*` does not fire on
+  `toolA/v1.2.3`, and a release that tags cleanly, builds nothing and looks shipped is the
+  failure here that nobody notices for days.
+
+### Changed
+
+- Every git check is now scoped to the project root — `git status --porcelain -- <root>` —
+  across `/work-init`, `/work-release`, `/work-ingest` and `/work-migrate`. `git add -A`,
+  `git add .`, `git add :/` and `git commit -a` are forbidden outright where `scope.root` is
+  set; every staged path is named and confirmed inside the boundary first.
+- Version control is now detected with `git rev-parse`, not by looking for a `.git` directory
+  beside the manifest. The old test reported "no version control" on a monorepo member, whose
+  repository legitimately sits several levels above it.
+- Discovery reports sibling projects instead of an unmanaged repository. Walking up from a
+  monorepo root correctly finds no manifest while several sit two levels down, so
+  `config-resolution.md` now scans downward before declaring the repository unmanaged, and
+  names what it found rather than picking one. Selecting a member on the human's behalf is how
+  work lands in the wrong project; the working directory is the unambiguous statement of
+  intent, which is why there is no `--project` flag.
+- `/work-release` fetches the base branch before merging into it and reports whether it had
+  moved. Where the same repository is checked out twice — the usual arrangement when two of
+  its apps are worked in parallel — merging onto a stale ref silently builds a release on a
+  tree nobody has.
+- `/work-prune` filters the tag history by `version.tag_template`. Reading it unfiltered gives
+  a version history belonging to several projects, and a cutoff drawn from that prunes the
+  wrong things in both directions.
+- `/work-crunch` states the boundary back as part of its pre-flight facts, warns when an
+  unattended run would claim repository-global tags, and may never widen
+  `scope.writes_outside` to make a cycle proceed.
+- Generated agent files carry the boundary as a paragraph before their owned-paths list and as
+  the first row of the scope table — one catch-all row rather than an enumeration of sibling
+  directories, which would go stale the day another is added. Owned paths are rendered
+  resolved rather than in the manifest's project-relative shorthand: the manifest is written
+  to stay portable, a prompt is written to be acted on.
+
+### Migration
+
+`/work-init --upgrade` brings a `model_version: 3` manifest to 4. On an ordinary repository
+the change is purely additive — `scope.root: null`, `writes_outside: []`,
+`agents_dir: project`, `tag_template: null` — and no path is rewritten.
+
+Where the manifest is found *below* its repository root, it is a monorepo member that has been
+managed as a whole repository. `/work-migrate` says so, proposes the `scope.root`, and offers
+to strip the now-redundant prefix from every path, showing the full before/after list first. It
+will not do it silently: a wrong root breaks every ownership table at once.
+
 ## [1.2.2] - 2026-08-13
 
 ### Fixed
