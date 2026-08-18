@@ -210,15 +210,84 @@ other checkout may have pushed since this one last looked.
 
 ### Upgrading an existing project
 
-`scope` and `version.tag_template` arrive with `model_version: 4`. Existing manifests keep
-working: run `/work-init --upgrade`, and on an ordinary repository it adds `scope.root: null`
-and `tag_template: null`, which preserve current behaviour exactly.
+`scope` and `version.tag_template` arrived with `model_version: 4`; `vcs.stages` with `5`.
+Existing manifests keep working: run `/work-init --upgrade`, and on an ordinary repository it
+adds `scope.root: null` and `tag_template: null` — which preserve current behaviour exactly —
+and expands `vcs.owner` plus `vcs.branching` into the six stages by table lookup, which needs
+no decisions from you.
 
 Where it finds a manifest that has been living *below* its repository root — a monorepo member
 managed as though it were a whole repository — it says so, proposes the `scope.root`, and
 offers to strip the now-redundant `apps/toolA/` prefix from every path. It shows you the full
 before/after list and will not do it silently: a wrong root breaks every ownership table at
 once.
+
+## Release stages — who does what
+
+A release performs six things, and `vcs.stages` says for each one **separately** whether it
+happens and who does it. There is no global "who owns version control" switch, because that
+question legitimately has six different answers:
+
+```yaml
+vcs:
+  system: git
+  stages:
+    branch:       human    # you cut it
+    commit:       agent    # the release coordinator commits
+    push:         agent    # and pushes
+    merge:        none     # no local merge
+    pull_request: agent    # it opens the PR
+    tag:          none     # nobody tags — the version lives in package.json
+  delete_branch: after-merge
+```
+
+| Value | Meaning |
+|---|---|
+| `none` | it does not happen |
+| `agent` | the release coordinator performs it |
+| `human` | the session **stops**, tells you exactly what to run, waits for confirmation, **verifies it landed**, and continues |
+
+`agent` names *who acts* — the AI rather than you. It never means a sub-agent gets spawned; the
+release coordinator is a persona `/work-release` adopts.
+
+**Stage order is `branch → commit → push → merge`/`pull_request` → `tag`.** Tag timing is
+derived from that order rather than configured: because tagging follows integration, a
+`human`-owned merge automatically defers the tag until the merge lands.
+
+**Consecutive `human` stages become one handoff**, not three waits. Interleaving them — a
+`human` push followed by an `agent` tag — is allowed but genuinely pauses the session
+mid-release, and `/work-release` says so up front rather than surprising you at the point it
+happens.
+
+`/work-init` offers named shapes (trunk, release branch, pull request, "you cut branches and I
+do the rest", "you own the repository") and writes the six fields explicitly. There is no preset
+field in the schema — that would re-bundle exactly what the stage table exists to unbundle.
+
+### Rules the manifest is checked against
+
+- `commit: human` forces every later stage to `human` or `none` — nothing downstream works
+  without commits, which makes this the total-handoff shape
+- `commit: none` is invalid
+- `merge` and `pull_request` may not both be active; either requires `branch`; `pull_request`
+  also requires `push`
+- `tag: none` requires `version.file`, or the version has nowhere to live
+- any `human` stage makes `/work-crunch` refuse — an unattended loop cannot wait on you
+
+**Tagging before a pull request merges is not supported and is not configurable.** The tag
+would point at a commit that may never reach the base branch, or that a squash or rebase
+rewrites out from under it.
+
+### A branch with no integration stacks
+
+`branch: agent` with both `merge` and `pull_request` set to `none` is a valid and useful shape
+— cut a branch, commit, push, stop. But a release branch is cut from the current `HEAD`, and
+nothing checks out the base afterwards, so **the next release branches from the last one.**
+Across several releases you get a linear stack rather than independent branches, and merging
+the newest brings the older ones with it.
+
+`/work-release` reports the base it cut from as a resolved ref every time, and says explicitly
+when that base is another release branch. `/work-crunch` warns before a multi-release run in
+this configuration and offers to cap itself at one release.
 
 ## Commands
 
@@ -232,7 +301,7 @@ maintenance.
 | `/work-plan` | Closes out a finished release, checks blocked items, refines intake into work items, proposes the next release scope. |
 | `/work-release` | Confirms scope, briefs and runs the required agents, verifies against acceptance criteria, then ships or hands off per the manifest. |
 | `/work-spike` | Runs investigation-only items, producing one Findings/Recommendations document each. Refuses to run non-spike work. |
-| `/work-crunch` | Loops plan → deliver → close out until the backlog empties or a guardrail stops it. Asks for its permissions once up front. Needs `vcs.owner: command` and a changelog. |
+| `/work-crunch` | Loops plan → deliver → close out until the backlog empties or a guardrail stops it. Asks for its permissions once up front. Needs every release stage owned by `agent` or `none`, and a changelog. |
 | `/work-review-deferred` | Re-triages parked items — keep, block, promote, or reject. The only thing that surfaces deferred work. |
 | `/work-prune` | Trims completed items whose delivery is already in the changelog or tags. |
 | `/work-migrate` | Updates a `project.yml` written against an older plugin version to the current schema, preserving its comments. Runs automatically inside `/work-init --upgrade`; call it directly to review the manifest edit on its own. |
@@ -256,8 +325,9 @@ without being named.
 - paths for work, spikes, architecture, decisions, product docs, changelog
 - ID prefixes and padding
 - request and work item type vocabularies, priority vocabulary
-- version control: whether the project is under it at all (`vcs.system: git | none`), who
-  operates it, and the branching model
+- version control: whether the project is under it at all (`vcs.system: git | none`), and
+  then, per release stage, whether it happens and who does it — branch, commit, push, merge,
+  pull request, tag
 - versioning, separately: scheme, who assigns the number, which file holds the version of
   record, which other files are kept in step with it, and the shape of the release tag
 - release mechanics: changelog requirement and manual deploy steps

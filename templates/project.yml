@@ -12,7 +12,7 @@
 #
 # Don't hand-edit this. `/work-init --upgrade` migrates an older manifest and
 # bumps it for you.
-model_version: 4
+model_version: 5
 
 # ---------------------------------------------------------------------------
 # Project identity
@@ -122,13 +122,60 @@ taxonomy:
 # only durable release record. See the README's "Version control is
 # optional" section before choosing it.
 #
-# When system is none, set owner and branching to null rather than leaving
-# their defaults — an unset default reads like a decision nobody made.
+# When system is none, set every stage to `none` rather than leaving the
+# defaults — a stage left at `agent` on a project with no repository reads
+# like a decision nobody made.
+#
+# ---------------------------------------------------------------------------
+# STAGES. A release performs six things, in this order, and each one says
+# separately whether it happens and who does it:
+#
+#   none    it does not happen
+#   agent   the release coordinator does it
+#   human   the session STOPS, tells you exactly what to run, waits for your
+#           confirmation, VERIFIES it, and continues
+#
+# "agent" means who acts — the AI rather than you. It does not mean a
+# sub-agent gets spawned: the release coordinator is a persona /work-release
+# adopts, and there is never a release-manager agent on any project.
+#
+# Consecutive human stages are handed off together, so `tag: human` next to
+# `push: human` is one instruction, not two waits. Interleaving them
+# (push: human, tag: agent) is allowed but genuinely stalls the session
+# mid-flight, and /work-release says so up front when you have.
+#
+# Rules the manifest is checked against:
+#   - commit: human forces every LATER stage to human or none. Nothing
+#     downstream works without commits, so this is the total-handoff shape.
+#   - commit: none is invalid. A release that commits nothing is not one.
+#   - merge and pull_request may not both be active — pick an integration.
+#   - either one requires branch to be active; pull_request also requires push.
+#   - tag: none requires version.file to be set, or the version has nowhere
+#     to live.
+#   - any stage set to human makes /work-crunch refuse: an unattended loop
+#     cannot wait on you.
 # ---------------------------------------------------------------------------
 vcs:
   system: git      # git | none
-  owner: command   # who runs commit/tag/push: command | human
-  branching: none  # none | branch | pr
+
+  stages:
+    # Cut a release branch from HEAD. none = work on the current branch.
+    branch: agent
+    # Commit the work. agent | human only — see the rules above.
+    commit: agent
+    # Publish to the remote. One owner covers every push, the branch and the
+    # tag alike. none = nothing leaves this machine.
+    push: agent
+    # Merge the release branch into the branch it was cut from (--no-ff).
+    merge: agent
+    # Open a pull request instead of merging. Mutually exclusive with merge.
+    pull_request: none
+    # Create the version tag. Comes AFTER integration, so where merge or
+    # pull_request is human-owned the tag naturally waits for it.
+    tag: agent
+
+  # What happens to the release branch once a merge lands.
+  delete_branch: after-merge   # after-merge | never
 
 # ---------------------------------------------------------------------------
 # Versioning — deliberately separate from vcs and release. A project can be
@@ -141,7 +188,7 @@ vcs:
 # ---------------------------------------------------------------------------
 version:
   scheme: semver-v # semver-v (v1.2.3) | semver (1.2.3) | date (2026.07.27) | none
-  owner: human     # who assigns the number: human | command
+  owner: human     # who assigns the number: human | agent
 
   # File holding the version of record. Required when vcs.system is none —
   # with no tag, there's nowhere else for the version to live. Recognised
@@ -178,8 +225,8 @@ version:
 # ---------------------------------------------------------------------------
 # Release mechanics — what happens around shipping, beyond versioning and
 # version control. The release coordinator is a PERSONA /work-release adopts
-# for the session, never a sub-agent; when vcs.owner is command, this is who
-# does the VCS work.
+# for the session, never a sub-agent; it is who performs any stage above that
+# is set to `agent`.
 # ---------------------------------------------------------------------------
 release:
   # required | optional | none. Treat as required when vcs.system is none —

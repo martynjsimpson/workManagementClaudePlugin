@@ -61,6 +61,19 @@ distinction matters more than the mechanics:
 **Mechanical** — a key renamed or moved with its value intact. `release.version_scheme` becomes
 `version.scheme`. No judgement, no loss. Apply these without asking.
 
+The **era E → F expansion is mechanical despite looking like a redesign.** `vcs.owner` and
+`vcs.branching` become the six-entry `vcs.stages` map, and every one of their six combinations
+has exactly one destination — the table is in `schema-history.md`, and no cell in it needs a
+human decision. Add `vcs.delete_branch: after-merge`, which is what era E did unconditionally,
+and rename `version.owner: command` to `agent`. Under `vcs.system: none`, set every stage to
+`none` rather than applying the table.
+
+**Show the expansion as a table in Step 3 even though it needs no decision.** The keys do not
+merely move — one answer becomes six, and a human skimming a list of renames will not otherwise
+see that "who owns git" is no longer a question this manifest asks. Point at the `pr` row
+specifically if it applies: era E's open-the-PR-and-stop behaviour is now `merge: human` plus
+`tag: agent`, with the tag deferral falling out of stage order rather than being stated.
+
 **Needs a decision** — a new field with no correct default, or an old field whose replacement
 means something different. Never fill these in silently. The known ones:
 
@@ -121,6 +134,13 @@ means something different. Never fill these in silently. The known ones:
   costs. **Preserve the old values in your report** so the human can paste them into that
   document — this is the one transition that discards content rather than moving it.
 - **`vcs.system`** (era A only) — establish it by checking for a repository, then confirm.
+- **`vcs.stages` beyond the mechanical expansion** — nothing here needs asking, but *offer*.
+  Once the six fields exist, per-stage ownership is expressible for the first time, and the
+  arrangement the old two fields forced may not be the one the human would choose. Show the
+  expanded table and ask, once, whether any stage should change now that it can — for example
+  cutting the branch themselves while the agent commits and opens the pull request, or setting
+  `tag: none` on a project that carries its version in a file and never tags. Accept "leave it"
+  without pressing; the expansion is already correct.
 
 ## Step 3 — Present the plan
 
@@ -132,6 +152,8 @@ Show, before writing:
 - **every path whose resolution changes**, as a before/after list, where `scope.root` ends up
   non-null. This is the one change a reader cannot infer from the key names, because the keys
   do not move — their meaning does;
+- **the stage expansion as a six-column table**, where `vcs.owner` and `vcs.branching` were
+  present. One answer becoming six is not legible as a list of renames;
 - any field being removed, and where its content should go instead;
 - the backup location under `vcs.system: none`.
 

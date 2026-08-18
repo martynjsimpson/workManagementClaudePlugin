@@ -32,14 +32,19 @@ and status vocabularies.
 An unattended loop is only safe on some manifests. Check these before asking the human
 anything, and report every failure at once rather than one at a time.
 
-**Refuse to run when `<vcs.owner>` is `human`.** `/work-release` Step 2a requires explicit
-human confirmation that the release branch exists before any file is written, and waits
-indefinitely for it. That gate is the human owning the repository, which is not something
-a run-scoped override can borrow. Report:
+**Refuse to run when any entry in `<vcs.stages>` is `human`.** A `human` stage stops the
+session and waits indefinitely for a confirmation nobody is there to give — the branch gate is
+the obvious case, but a `human`-owned push or tag strands the run just as completely, and later
+in the cycle where more work is already in flight. Name the offending stages rather than the
+block as a whole. Report:
 
-> `/work-crunch` needs `vcs.owner: command`. This project reserves version-control actions
-> for you, so each release stops at the branch gate. Run `/work-plan` and `/work-release`
-> directly.
+> `/work-crunch` needs every release stage owned by `agent` or set to `none`. This project
+> gives you `branch` and `tag`, so each release stops waiting for you. Run `/work-plan` and
+> `/work-release` directly.
+
+A run-scoped override cannot borrow these. Unlike the version-owner override in Step 2 — where
+the human is present to grant it — a `human` stage is a statement that a person must physically
+act, and no permission granted up front makes that happen while they are away.
 
 **Refuse to run when a code release would leave no record.** If `<release.changelog>` is
 not `required`, or `<paths.changelog>` is null, stop. A single release you watched can
@@ -51,9 +56,24 @@ This check applies to code releases only. A spike cycle correctly writes no chan
 entry — the spike document is its durable record — so do not treat a spike-only run as
 lacking one.
 
-**Cap the run at one release when `<vcs.branching>` is `pr`.** `/work-release` Step 7 stops
-without tagging under `pr` and waits for a merge whose timing you do not control. Say so,
+**Cap the run at one release when `<vcs.stages.pull_request>` is active.** `/work-release`
+stops at an open pull request and waits for a merge whose timing you do not control. Say so,
 set the budget to 1 regardless of what was requested, and continue.
+
+**Warn when nothing integrates and the budget is above one.** If `<vcs.stages.branch>` is
+active while both `<vcs.stages.merge>` and `<vcs.stages.pull_request>` are `none`, every cycle
+cuts a release branch that nothing ever merges — and because `/work-release` cuts from the
+current `HEAD` and never checks out the base, **each cycle branches from the previous cycle's
+release branch.** A three-release run therefore leaves a stack, not three independent branches:
+the third contains the first two, and merging it later brings them along.
+
+That is a legitimate arrangement — a linear stack is what some workflows want — but it is not
+what "three release branches" sounds like, and it is invisible in a single manual release. Say
+it plainly, name the branch the first cycle will cut from, and offer to cap the budget at 1.
+Take their answer either way; do not cap it yourself.
+
+This does not apply when `<vcs.stages.branch>` is `none`, where every cycle commits to the
+current branch and no stack forms.
 
 **Warn hard when nothing verifies the work.** If `<testing.policy_document>` is null, the
 only verification is each release's own bar plus whatever the human checks by hand. Combined
@@ -85,7 +105,7 @@ assumptions.
 Then ask for:
 
 1. **Release budget** — maximum releases this run. Use the command argument if one was
-   given. Default to 3. Under `pr` branching this is already fixed at 1.
+   given. Default to 3. Where a `pull_request` stage is active this is already fixed at 1.
 2. **Scope approval** — auto-approve each `/work-plan` proposal, or pause for approval
    every cycle. Pausing is not a lesser mode; it is a reasonable way to run this.
 3. **Release size** — maximum work items per release. Default 4. Keep releases small and
@@ -98,7 +118,9 @@ Then ask for:
 6. **Spike confirmation** — auto-confirm `/work-spike` Step 1's "run all or specific
    ones", or pause. Skip this question if the backlog holds no spike items.
 7. **Version owner override** — only if `<version.owner>` is `human`. Ask whether, *for
-   this run only*, you may assign version numbers per the rule in (4).
+   this run only*, you may assign version numbers per the rule in (4). This is the one
+   ownership question a run-scoped answer can settle, because assigning a number is a decision
+   rather than an action someone must physically perform.
 
 **Record the answers in your report and never in the manifest.** `project.yml` is the
 standing decision; a pre-flight is one afternoon's permission. Do not edit the manifest as
@@ -174,7 +196,7 @@ Look up every selected work item's `type` in `<paths.work>/backlog.yml`:
   that is correct, not an omission.
 - **No `spike`** — run `/work-release`, following `commands/work-release.md` in full,
   including the branch gate and the Step 2b version write. Apply the bump rule from the
-  contract when `<version.owner>` is `command` or the run-scoped override was granted.
+  contract when `<version.owner>` is `agent` or the run-scoped override was granted.
 - **Mixed** — 4a should have prevented this. Do not attempt either command. Stop the run
   and report it as a planning fault to fix by hand.
 
@@ -259,7 +281,7 @@ investigated is in `<paths.spikes>` — the durable records already exist.
 - Never restate or abbreviate `work-plan.md`, `work-release.md` or `work-spike.md`. Read
   and follow them. Every constraint in those files holds here.
 - Never edit `<paths.work>/project.yml`. A pre-flight answer is scoped to this run.
-- Never run with `<vcs.owner>` set to `human`.
+- Never run with any `<vcs.stages>` entry set to `human`.
 - Never guess a product decision to avoid stopping. Park the question and continue.
 - Never auto-bump a major version.
 - Never mark a release `abandoned`, revert code, or restore a version. Stop and hand off.

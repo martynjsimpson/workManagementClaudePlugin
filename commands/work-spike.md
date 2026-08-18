@@ -32,7 +32,7 @@ the only signal outside this session that the investigation started: anything wa
 file — a human, a monitoring tool, or `/work-crunch` resuming an interrupted run — sees a
 release still sitting at `approved` as one where nothing has begun, and treats re-running
 the spikes from the top as safe. Commit that change where `<vcs.system>` is `git` and
-`<vcs.owner>` is `command`, per Step 3.
+`<vcs.stages.commit>` is `agent`, per Step 3.
 
 Finish each spike completely before starting the next. Spike findings frequently change
 what the next spike should even ask.
@@ -74,9 +74,9 @@ Recommendations in each, and run `/work-plan` to process the recommendations int
 and backlog items.
 
 Handle the spike documents per `<vcs>`. When `<vcs.system>` is `none`, there is nothing to
-commit — just name the files written. When it is `git` and `<vcs.owner>` is `human`, note
+commit — just name the files written. When it is `git` and `<vcs.stages.commit>` is `human`, note
 that the documents are uncommitted files for them to commit as normal, along with
-`<paths.work>/active-release.md`. When `<vcs.owner>` is `command`, commit them: spike
+`<paths.work>/active-release.md`. When `<vcs.stages.commit>` is `agent`, commit them: spike
 documents are the deliverable, and the same ownership rule applies to them as to code.
 
 Where you commit, commit `active-release.md` too, and commit each status transition as it

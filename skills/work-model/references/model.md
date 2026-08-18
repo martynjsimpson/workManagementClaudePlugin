@@ -230,7 +230,13 @@ Status: proposed
 ```
 
 Who assigns the version is set by `<version.owner>`. Whether there is any version control at
-all is set by `<vcs.system>`, and who operates it by `<vcs.owner>`.
+all is set by `<vcs.system>`, and who performs each release stage by `<vcs.stages>`.
+
+**There is no global "who owns version control" answer.** A release performs six things —
+branch, commit, push, merge or pull request, and tag — and each says separately whether it
+happens and who does it: `none`, `agent`, or `human`. Cutting the branch yourself while the
+agent commits and opens the pull request is an ordinary configuration, not a special case.
+`config-resolution.md` holds the stage order, the vocabulary, and the validity rules.
 
 **Versioning and version control are independent.** A project may carry a version in
 `package.json` with no repository, or sit under git with the version expressed only as a tag.
@@ -241,15 +247,16 @@ writes `Version: TBD`; `/work-release` confirms the number immediately after sco
 writes it to `<version.file>` and `<version.mirrors>` before any implementation begins, so
 everything built during the session carries the number it will ship as. The consequence is that
 an abandoned release has already bumped the version, and restoring it is part of the
-abandonment rather than optional tidying. Under `git` with `<vcs.owner>` `command` the bump
-is committed on its own, immediately and before any agent is spawned, so it is the first
+abandonment rather than optional tidying. Under `git` with `<vcs.stages.commit>` `agent` the
+bump is committed on its own, immediately and before any agent is spawned, so it is the first
 release-owned commit on the branch: the anchor a rollback rewinds to, and a single revert
 rather than a hand-restore of every versioned path.
 
 **The release coordinator is a persona, not an agent.** It is the role `/work-release`
 adopts for the duration of a release session. There is no `release-manager` or
 `release-coordinator` sub-agent on any project, and one must never be spawned. When
-`<vcs.owner>` is `command`, it is that persona performing the commit, tag, and push.
+a stage is owned by `agent`, it is that persona performing it. The stage value `agent` names
+who acts — the AI rather than the human — and never authorises spawning a sub-agent for it.
 
 **A project need not be under version control.** When `<vcs.system>` is `none`, every VCS
 step is skipped rather than failed: no commit, no tag, no branch, no working-tree check, and
@@ -280,13 +287,14 @@ accepted, giving `approved → in-progress → ready-for-release` where a code r
 `approved → in-progress → testing → ready-for-release`. Marking individual work items done
 is not a substitute — nothing downstream reads them to infer that the release finished.
 
-Where `<vcs.system>` is `git` and `<vcs.owner>` is `command`, that interface extends to the
+Where `<vcs.system>` is `git` and `<vcs.stages.commit>` is `agent`, that interface extends to the
 repository: the delivery command commits `active-release.md`, `backlog.yml` and
 `requests.md` as they change, starting with a commit of the planning state once the release
 branch exists and continuing through each status transition. An uncommitted status line has
 not moved for anything reading the repository rather than the working tree. Where
-`<vcs.owner>` is `human`, the command commits nothing and names those files in its handoff
-instead.
+`<vcs.stages.commit>` is `human`, the command commits nothing and names those files in its
+handoff instead — which, because commit is the pivot every later stage depends on, means the
+whole release is a handoff.
 
 The difference between `abandoned` and `cancelled` is whether code was written and
 undone. An abandonment note must state why, what was not delivered, what must happen
@@ -336,8 +344,8 @@ lapsed. That is a maintenance signal, not a normal state.
 3. `active-release.md` is the only current delivery scope.
 4. There is no batch or slice concept.
 5. Completion metadata is separate from status (`Status: done` + `Done in:`).
-6. Version assignment follows `<version.owner>`; version-control actions follow
-   `<vcs.system>` and `<vcs.owner>`. These are independent, and none is decided per session.
+6. Version assignment follows `<version.owner>`; each version-control action follows its own
+   entry in `<vcs.stages>`. These are independent, and none is decided per session.
 7. Nothing is written outside the project root unless `<scope.writes_outside>` authorises
    that exact path. Reads are unrestricted.
 8. If a work item is uncertain, its first action is audit or clarification, not

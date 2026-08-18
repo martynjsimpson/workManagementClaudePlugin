@@ -6,6 +6,100 @@ to `version` in [`.claude-plugin/plugin.json`](.claude-plugin/plugin.json) —
 bumping that field is what ships a new version to installed users and, via
 the release workflow, tags a GitHub Release.
 
+## [1.4.0] - 2026-08-18
+
+### Added
+
+- **Per-stage release ownership.** `vcs.owner` asked one question — agent or human — and
+  `vcs.branching` bundled *whether* each version-control action happens with *which* set of
+  them happens at all. Between them they offered three shapes out of roughly fifteen sensible
+  ones, and none of the obvious wants was expressible: cut the branch yourself while the agent
+  commits and opens the pull request; push a release branch and stop; never tag at all because
+  the version lives in `package.json` and the pipeline fires on a branch push.
+
+  Enablement and ownership are one question asked twice, so `model_version: 5` replaces both
+  fields with `vcs.stages` — six stages, each valued `none | agent | human`:
+
+  ```yaml
+  vcs:
+    stages:
+      branch: human        # you cut it
+      commit: agent        # the release coordinator commits
+      push: agent          # and pushes
+      merge: none
+      pull_request: agent  # it opens the PR
+      tag: none            # nobody tags
+    delete_branch: after-merge
+  ```
+
+  `none` = it does not happen. `agent` = the release coordinator performs it. `human` = the
+  session stops, states exactly what to run, waits for confirmation, verifies it landed, and
+  continues.
+
+- **`vcs.delete_branch`**, so a merged release branch can survive. Previously forced.
+
+### Changed
+
+- **`command` is now `agent` throughout**, in `vcs.stages.*` and `version.owner` alike.
+  `command` was internal jargon leaking into a user-facing value. The word names *who acts* —
+  the AI rather than the human — and never authorises spawning a sub-agent: the release
+  coordinator remains a persona `/work-release` adopts. `testing.agent` uses the word in its
+  other sense, naming a roster member, and the two do not interact.
+- **Tag timing is derived, not declared.** Because tagging follows integration in the stage
+  order, a `human`-owned merge defers the tag until it lands — which is exactly what the old
+  `branching: pr` mode did by special case. No timing field was needed.
+- **`/work-release` walks the stages** instead of branching on three presets. It reports the
+  whole stage plan in Step 2, before anything is written, and names any interleaved ownership
+  — an `agent` stage between two `human` ones — as a session that will stall mid-release.
+  Consecutive `human` stages collapse into one handoff rather than several waits.
+- **Every human→agent boundary is verified, not trusted.** The branch gate already insisted on
+  confirmation "not on an assumption, a 'will do', or silence"; that standard now applies at
+  every boundary, with a per-stage verification table. An agent about to tag a merge it did not
+  perform confirms the merge actually landed first.
+- **A `human`-owned final stage completes the release in-session.** Previously the
+  pull-request flow required a second run to move the status line, which left it at
+  `ready-for-release` indefinitely whenever nobody came back — and that line is the release's
+  external interface. An open pull request remains the one honest exception.
+- `/work-crunch` refuses when **any** stage is `human`, naming the offending stages, rather
+  than checking a single `vcs.owner`. A `human`-owned push or tag strands an unattended run
+  just as completely as the branch gate did, and later in the cycle.
+- `/work-init` settles stages by offering **named shapes** — trunk, release branch, pull
+  request, "you cut branches and I do the rest", "you own the repository" — and writes the six
+  fields explicitly. There is deliberately no preset field in the schema; that would re-bundle
+  what the stage table exists to unbundle. Tagging is asked separately, because `tag: none` is
+  an ordinary answer a preset should not quietly decide.
+- Generated agent files resolve `{{VCS_CONSTRAINT}}` from `vcs.stages.commit` alone. It is the
+  only stage an implementer's work depends on; enumerating the other five is noise.
+- **Release branches that never integrate now say so.** `branch: agent` with no `merge` or
+  `pull_request` is a valid shape — cut, commit, push, stop — but a release branch is cut from
+  the current `HEAD` and nothing checks out the base afterwards, so the next release branches
+  from the last one. Across several releases that is a linear stack rather than independent
+  branches, and merging the newest brings the older ones along. It is invisible in a single
+  manual release and easy to inherit unknowingly from a loop.
+
+  `/work-release` now reports the base as a resolved ref — `cut from main @ a1b2c3d` — rather
+  than as "the current branch", because `HEAD` has moved by the time anyone reads the report.
+  Where the base is itself a release branch it says so explicitly and names the consequence.
+  `/work-crunch` warns before a multi-release run in this configuration and offers to cap the
+  budget at one, taking the answer either way rather than capping itself.
+
+### Unchanged by design
+
+Tagging before a pull request merges remains unsupported and is not configurable. The tag would
+point at a commit that may never reach the base branch, or that a squash or rebase rewrites out
+from under it.
+
+### Migration
+
+`/work-init --upgrade` expands the two old fields into the six new ones. It is a mechanical
+table lookup — all six combinations of `vcs.owner` and `vcs.branching` have exactly one
+destination each, and nothing needs a human decision. The full table is in
+`skills/work-model/references/schema-history.md`.
+
+`/work-migrate` shows the expansion as a table rather than a list of renames, since one answer
+becoming six is not otherwise legible, and offers — once, without pressing — to change any
+stage now that per-stage ownership is expressible for the first time.
+
 ## [1.3.0] - 2026-08-18
 
 ### Added

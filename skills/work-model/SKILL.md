@@ -30,7 +30,7 @@ rules that follow from telling them apart. Read that section before resolving an
 running any git command; on a repository holding one project the two roots coincide and
 nothing changes, but the assumption that they always coincide is wrong on a monorepo.
 
-**The supported schema is `model_version: 4`.** The compatibility gate in
+**The supported schema is `model_version: 5`.** The compatibility gate in
 `references/config-resolution.md` is checked before any other field, by every command. A stale
 manifest is a stop with a pointer to `/work-init --upgrade`, never an auto-migration.
 
@@ -112,11 +112,20 @@ touched by hand, verify:
   `<release.pipeline.definition>` names a file with `trigger: tag-push`, read that file and
   confirm its tag filter actually matches what the template renders. A workflow watching `v*`
   does not fire on `toolA/v1.2.3`, and that combination ships a release that builds nothing.
+- **Stage coherence** — check `<vcs.stages>` against the validity table in
+  `references/config-resolution.md`, and report every failure at once rather than the first.
+  The rules that catch real misconfigurations: `commit: human` with any later stage set to
+  `agent` (nothing downstream works without commits); `merge` and `pull_request` both active;
+  either active without `branch`; `pull_request` without `push`; `tag: none` with
+  `<version.file>` null, which leaves the version nowhere to live. Also flag interleaved
+  ownership — an `agent` stage between two `human` ones — not as an error but as a session
+  that will stall mid-flight, which the human should know before a release rather than during
+  one.
 - **Version-control coherence** — if `<vcs.system>` is `none`, then
   `<version.file>` must be set, because a tag is not available to hold the version — and
   `<version.tag_template>` is inert, since there are no tags to name;
   `<paths.changelog>` should be set, because it is the only remaining narrative record; and
-  `<vcs.owner>` and `<vcs.branching>` are inert and should not be relied on. If
+  every stage in `<vcs.stages>` must be `none`, since there is no repository to act on. If
   `<vcs.system>` is `git`, confirm a repository actually exists — a manifest claiming git on
   a directory with no repository will make every release hand off to steps the user cannot
   perform. Test with `git rev-parse --show-toplevel`, not by looking for a `.git` directory
