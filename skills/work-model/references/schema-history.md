@@ -96,6 +96,11 @@ top-level `scope:` block.
 - **Recommend a `tag_template` whenever `scope.root` ends up non-null**, and say why in one
   line: a bare `v1.2.3` is a repository-global name that the next member to reach that version
   cannot also claim.
+- **Then apply the E → F transition above** — expand `vcs.owner` and `vcs.branching` into the
+  six-entry `vcs.stages` map per its table, add `vcs.delete_branch: after-merge`, and rename
+  `version.owner: command` to `agent`. D → F is two eras, not one, and the second half is the
+  part a reader skimming this list is most likely to miss because the first half is additive
+  and this half is not.
 
 ### Era C — declared `2`, actually plugin 0.4–0.5
 
@@ -142,8 +147,19 @@ apply the D → E and E → F transitions above.
 
 1. Bump `model_version` in `templates/project.yml`.
 2. Add the era here with its tells and its transition to current.
-3. Teach `/work-migrate` the transition, including which new fields need a human decision
+3. **Then fix the era immediately below it.** The previously-current era had no transition at
+   all — it *was* current — and adding a new one silently leaves it as the only era that
+   cannot reach the top. Give it explicit tells, since it now needs identifying rather than
+   assuming, and write out its transition to the new current version. Renaming its heading is
+   not enough; the steps have to be there. Every era further down already chains through it,
+   so this one entry is what the whole chain hangs on — and it is the most-used upgrade path
+   on the day a version ships, because it is what everyone is currently on.
+4. Teach `/work-migrate` the transition, including which new fields need a human decision
    rather than a default.
-4. Update the supported version in the `work-model` skill and in `config-resolution.md`.
-5. Never silently accept an old shape by making the new field optional — that is how
+5. Update the supported version in the `work-model` skill and in `config-resolution.md`.
+6. **Walk every era from the bottom up and confirm each reaches current**, following its
+   chain literally rather than trusting the heading. A transition that says "to reach F" while
+   listing only the moves to E is the failure this check exists for, and it is invisible unless
+   the chain is actually traced.
+7. Never silently accept an old shape by making the new field optional — that is how
    `model_version` became decorative in the first place.
