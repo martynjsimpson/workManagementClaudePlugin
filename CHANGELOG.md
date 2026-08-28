@@ -6,6 +6,25 @@ to `version` in [`.claude-plugin/plugin.json`](.claude-plugin/plugin.json) —
 bumping that field is what ships a new version to installed users and, via
 the release workflow, tags a GitHub Release.
 
+## [1.6.0] - 2026-08-28
+
+### Changed
+
+- **`/work-release` now says what to do about a dirty working tree.** Step 2a told the
+  coordinator to run a scoped `git status` and then never said what a dirty result meant, so
+  the response was improvised per run. The common case is a `/work-init` or `/work-migrate`
+  upgrade — both read-only git by design — whose manifest and regenerated agent roster are
+  still sitting uncommitted when the next release starts. Read against Step 2b's instruction
+  to commit three named work files and no others, that surfaced as a refusal rather than a
+  question, and clearing it took a round trip.
+
+  Step 2a now names the paths, says which command produced them, and asks. On approval they
+  are committed as their own commit ahead of Step 2b's — a model upgrade and a release's
+  starting position are two separate changes, and folding them together buries one in the
+  other. On a decline the release continues, with one line noting that the manifest it reads
+  its configuration from will not be in history. Other dirt under the project root stays
+  untouched and is reported, as before.
+
 ## [1.5.0] - 2026-08-28
 
 ### Changed

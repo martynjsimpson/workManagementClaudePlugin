@@ -155,6 +155,16 @@ unscoped check turns a clean-tree precondition into a blocker nobody in this ses
 Add any `<scope.writes_outside>` paths to the pathspec, since those are this release's to
 change too.
 
+**Say what a dirty result means.** Uncommitted paths in `<paths.work>` beyond the three files
+Step 2b commits, or in the agent roster directory, are almost always a `/work-init` or
+`/work-migrate` run left uncommitted — both are read-only git by design, so their output sits
+in the tree until someone commits it. Name the paths, say which command produced them, and
+ask. On a yes, commit them as their own commit before Step 2b's, never folded into it: a model
+upgrade and a release's starting position are two different changes. On a no, say in one line
+that the manifest this release reads its configuration from will not be in history, and
+continue — that is the human's call, not a blocker. Other dirt under the project root is not
+this release's to touch: report it and ask before writing anything.
+
 ## Step 2b — Commit the work files, then write the version
 
 Only now, with the branch confirmed, write anything.
