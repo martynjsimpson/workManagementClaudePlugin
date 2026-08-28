@@ -71,6 +71,13 @@ that is precisely the drift that makes the vocabulary meaningless.
 observed, where, and what was expected instead. The person reading it in three weeks is
 usually the same person who wrote it, and they will not remember.
 
+**Write it for a person, not for the implementer.** `Title:` states the effect, not the
+mechanism — someone should recognise what it is about without opening the code. Rule ids,
+paths and symbol names belong in `Summary:` after the sentence that works without them, or
+in `Notes:`. This binds hardest when you are capturing something *you* noticed at the end of
+a session rather than something a person dictated: that is the case where a title written in
+the voice of the code is the natural mistake, and the result is intake nobody recognises.
+
 **Do not refine.** No acceptance criteria, no work items, no dependency analysis, no
 implementation opinion. `Status: inbox` means unreviewed, and `/work-plan` does the
 reviewing. Capturing a half-refined request is worse than a rough one, because it looks
