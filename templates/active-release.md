@@ -51,8 +51,10 @@ Section skeleton for a proposed release:
   ## Blockers
 
   ## Deferred items for PM
-  Added during a release when something out of scope surfaces. /work-plan converts
-  each entry into a request and removes the block.
+  Added during a release when something out of scope surfaces. /work-plan triages each
+  entry — a decision becomes a request, specified work goes straight to backlog.yml with
+  source_release set, and a note-only finding goes to the durable record — then removes
+  the block. Write each entry with enough detail to act on without this session.
 -->
 
 No active release.

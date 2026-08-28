@@ -95,9 +95,35 @@ Work items: <backlog item IDs once they exist>
 Source: <where it came from, e.g. "human request (direct)">
 Done in: <release version, or SPIKE: <ITEM-ID> — only when status is done or partially-done>
 Blocked on: <named dependency — only when status is blocked>
+Parked since: <version or date the item first stalled — see "Review pressure">
+Reviewed: <count> — last <version or date>, <one line on why it is still open>
 ```
 
 Do not invent additional fields. Do not use sub-headings inside a request block.
+
+### Write a request the human can read
+
+A request is the one file in this model addressed to a person. It is read by whoever
+decides what happens next, which is usually someone who has not read the code the request
+came out of — so `Title:` and `Summary:` are written for that reader, not for the agent
+that will implement it.
+
+- **`Title:` states the effect, not the mechanism.** "Security guidance is written out
+  twice — keep both copies or cite one?" rather than "Decide whether C4's
+  guidance-placement rule should be de-duplicated between the standard and the update
+  skill". A title that cannot be understood without opening two other files is a title
+  that will be skipped.
+- **`Summary:` must stand alone.** Rule ids, file paths, symbol names and item IDs may
+  appear, but only after the sentence that says what is at stake without them.
+- **A request that asks the human a question ends its `Summary:` with that question.**
+  Not in `Notes:`, and not under a heading partway down it. `Notes:` is background for
+  whoever picks the work up; a question buried there has not been asked.
+- **Mechanism, evidence and history go in `Notes:`.** Nothing is lost by moving them —
+  they are simply below the part that has to be read.
+
+This applies to every request whoever writes it, and it binds hardest on requests written
+by an agent, because those are the ones drafted in the voice of the session that found the
+problem rather than the voice of the person who has to decide about it.
 
 ### Request statuses
 
@@ -134,7 +160,8 @@ The file begins with `model_version: 1` and contains an `items:` list.
 
 ```yaml
 - id: <work_prefix>-001
-  source_request: <request_prefix>-001   # or null
+  source_request: <request_prefix>-001   # or null — set when a human asked for this
+  source_release: <version>              # or null — set when a release found it
   title: short description
   type: <one of taxonomy.work_types>
   capability: product area or capability
@@ -150,7 +177,35 @@ The file begins with `model_version: 1` and contains an `items:` list.
   evidence: reference to the spec section, file, or note justifying this item
   done_in: []                            # only when status is done — versions, or SPIKE: <ITEM-ID>
   blocked_on: ...                        # only when status is blocked
+  parked_since: <version>                # when it first stalled — see "Review pressure"
+  reviewed: <count>                      # times re-checked without changing
 ```
+
+### Where a work item came from
+
+`source_request` and `source_release` record provenance, and **exactly one of them is
+set**. A work item traces either to something a person asked for or to something a
+release discovered — never both, never neither.
+
+- `source_request: <request_prefix>-nnn` — a human-facing ask was refined into this.
+- `source_release: <version>` — a release surfaced this while building something else,
+  and it needed no human decision to specify. There is no request, deliberately.
+
+They are two keys rather than one free-text field because the difference is the only
+cheap way to answer a question worth asking regularly: **every work item carrying a
+`source_release` and no `source_request` is work that nobody asked for.** Most of it is
+legitimate upkeep on code that already exists. Some of it is scope arriving through the
+back door. Collapsing both origins into one field makes the two indistinguishable, and
+the question then costs a full read of the backlog instead of a grep.
+
+`evidence` is a different field and does not substitute for either: it points at the spec
+section or file that justifies the work, not at who wanted it.
+
+**Both fields are additive, and older backlogs predate `source_release`.** An existing item
+carrying `source_request: null` and nothing else is legacy, not invalid. Backfill it when you
+next touch that item for another reason, from its `evidence` or the release it shipped in;
+do not sweep the file to fix them all, and do not block on one. New items written from this
+version on always set exactly one.
 
 ### Work item statuses
 
@@ -175,6 +230,67 @@ Do not try to make request status mirror every downstream work item status. A re
 with three work items, one shipped and two outstanding, is `partially-done` — not three
 statuses at once.
 
+## Review pressure
+
+Some items are re-checked every planning session — `blocked` and `partially-done`
+requests, `blocked` work items — and `deferred` items are re-checked whenever
+`/work-review-deferred` runs. An item that survives many of those checks unchanged is not
+a neutral fact about the backlog. **It is a decision nobody has made**, and the longer it
+sits the more likely the right answer is to drop it rather than to keep carrying it.
+
+Two fields make that visible, on requests as `Parked since:` / `Reviewed:` and on work
+items as `parked_since` / `reviewed`:
+
+```text
+Parked since: 0.18.4
+Reviewed: 7 — last 0.22.0, still waiting on a risk call only the human can make
+```
+
+- `Parked since:` is written once, when the item first stalls, and never changed after.
+- `Reviewed:` is **replaced** at every re-check, with the count incremented by one.
+
+### Replace the review note; do not append to it
+
+A re-check that finds nothing changed **overwrites** the `Reviewed:` line and adds
+nothing to `Notes:`. It does not append a dated paragraph restating the item.
+
+The rule of thumb: *if the note would read the same as last time with a new date on it, it
+replaces rather than appends.*
+
+This matters more than it looks. A restatement per session turns `Notes:` into a
+transcript that grows without bound, and the transcript is storage for what is really a
+counter — so the file pays hundreds of lines to hold an integer. These files are version
+controlled; the history of a request is its commit history, and duplicating that history
+inside the working copy makes the live file harder to read without making the record any
+more durable.
+
+**The carve-out is a material change.** Append to `Notes:` when the situation actually
+moved — the question changed shape, a new constraint appeared, the human answered with
+something other than yes or no, an adjacent decision overtook it. Those are information.
+"Unchanged, still waiting" is not, and it belongs in the `Reviewed:` line where one copy
+of it lives.
+
+### Escalation at five
+
+Once `Reviewed:` reaches **5**, restating the item is no longer an acceptable outcome of a
+review. The next review must stop and put three options to the human explicitly:
+
+1. **Do it now** — promote it into the next release scope.
+2. **Reject it** — it has been carried five times without anyone wanting it enough to act.
+3. **Park it with a named trigger** — a specific thing that would make it live again. Where
+   that trigger is a dependency, the item is `blocked` and the trigger goes in
+   `Blocked on:` / `blocked_on`; where it is a condition rather than a dependency, it goes
+   in `Notes:` and the `Reviewed:` count resets to 0, because the item is now waiting on
+   something stated rather than on nobody having decided.
+
+**Reject must be offered as a first-class option, in those words.** An item reviewed five
+times is evidence about how much it is wanted, and the escalation exists to convert that
+evidence into a decision. An escalation that only ever offers "do it" or "keep waiting"
+asks the same question a sixth time.
+
+Report the count when you escalate — "this has been reviewed five times since 0.18.4" is
+the whole point, and it is the part the human is being asked to weigh.
+
 ## Spike work items
 
 A spike is investigation-only work. It produces knowledge, not shippable code.
@@ -189,8 +305,28 @@ explored and documented before work items can be written.
 - `## Recommendations` — specific, actionable next steps, phrased so follow-on backlog
   items can be written directly from them. Not high-level observations.
 
+**Recommendations are numbered `R1`, `R2`, … and each number is one recommendation.** The
+number is the unit of triage: what becomes a work item, a request, or an explicit decline
+when the spike's release closes out. A recommendation may carry sub-points beneath it —
+cited as `R6 item 5` — but those are detail within one recommendation, not separate
+recommendations, and they are not triaged individually.
+
+Numbers are stable once written. A later session citing `R4` must find the same
+recommendation there, so recommendations are never renumbered and a superseded one is
+marked rather than removed. This is what lets `evidence` point at
+`<paths.spikes>/<ITEM-ID>.md R4` and stay true.
+
 **Done for a spike** means that document exists with both sections populated. No code
 ships. No version is bumped. No test coverage is expected.
+
+**The recommendations are the deliverable, and they are processed when the spike's release
+closes out** — not left in the document for someone to find. Work derived from them
+**inherits the spike work item's own provenance**: the `source_request` that commissioned
+the investigation, or its `source_release` where the spike itself came from a release
+finding. A spike is a route between an ask and the work it leads to, not a third kind of
+origin, which is why there is no `source_spike` key. The link to the document is carried by
+`evidence`, as `<paths.spikes>/<ITEM-ID>.md` plus the section it came from — a mention in
+prose is not a reference anything can follow.
 
 **Completion is recorded as `SPIKE: <ITEM-ID>`**, in the work item's `done_in` and in the
 `Done in:` of any request it completes — never a version, and never free text. A spike bumps
@@ -344,6 +480,8 @@ lapsed. That is a maintenance signal, not a normal state.
 3. `active-release.md` is the only current delivery scope.
 4. There is no batch or slice concept.
 5. Completion metadata is separate from status (`Status: done` + `Done in:`).
+   Provenance is likewise its own field: exactly one of `source_request` / `source_release`
+   on every work item.
 6. Version assignment follows `<version.owner>`; each version-control action follows its own
    entry in `<vcs.stages>`. These are independent, and none is decided per session.
 7. Nothing is written outside the project root unless `<scope.writes_outside>` authorises

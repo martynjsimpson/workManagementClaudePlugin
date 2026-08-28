@@ -262,8 +262,9 @@ State, in this order:
 
 1. Which stop condition ended the run, quoted from Step 5.
 2. Every release that shipped — version, work items, and where the changelog entry landed.
-3. Every spike document produced, with its path, and that `/work-plan` processes its
-   recommendations into requests.
+3. Every spike document produced, with its path, and that `/work-plan` Step 1b processes
+   its recommendations — into work items where the answer is settled, into requests where a
+   decision is still the human's.
 4. Every question parked in Step 4a, with the request ID carrying it. These live in
    `requests.md` as `needs-refinement`; they are not lost, but nothing else surfaces them.
 5. Anything `/work-release` recorded under `## Deferred items for PM` that has not yet been

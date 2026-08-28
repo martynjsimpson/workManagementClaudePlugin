@@ -17,6 +17,8 @@ Request  ->  Work item  ->  Active release  ->  Done
 ```
 
 - **Request** — something wanted or noticed, captured in your own words. Rough is fine.
+  Findings an agent turns up mid-release do not land here; they become work items directly,
+  so intake stays recognisably yours.
 - **Work item** — a refined, agent-ready unit with acceptance criteria.
 - **Active release** — the selected work items, being built now.
 - **Done** — the durable record: changelog, tags, tests, and the code itself.
@@ -298,11 +300,11 @@ maintenance.
 |---|---|
 | `/work-init` | Sets a project up. `--dry-run` writes nothing; `--repair`/`--upgrade` (same flag) regenerates agents after a manifest change, upgrading a stale manifest first if the schema has moved. |
 | `/work-ingest` | One-time backfill of `requests.md` from a PRD, TODO file, code comments, or a superseded planning folder. Verifies each candidate against the codebase first. |
-| `/work-plan` | Closes out a finished release, checks blocked items, refines intake into work items, proposes the next release scope. |
+| `/work-plan` | Closes out a finished release, triages what it found and any spike recommendations, checks blocked items, refines intake into work items, proposes the next release scope. |
 | `/work-release` | Confirms scope, briefs and runs the required agents, verifies against acceptance criteria, then ships or hands off per the manifest. |
 | `/work-spike` | Runs investigation-only items, producing one Findings/Recommendations document each. Refuses to run non-spike work. |
 | `/work-crunch` | Loops plan → deliver → close out until the backlog empties or a guardrail stops it. Asks for its permissions once up front. Needs every release stage owned by `agent` or `none`, and a changelog. |
-| `/work-review-deferred` | Re-triages parked items — keep, block, promote, or reject. The only thing that surfaces deferred work. |
+| `/work-review-deferred` | Re-triages parked items — keep, block, promote, or reject. The only thing that surfaces deferred work, and it forces a decision on anything reviewed five times. |
 | `/work-prune` | Trims completed items whose delivery is already in the changelog or tags. |
 | `/work-migrate` | Updates a `project.yml` written against an older plugin version to the current schema, preserving its comments. Runs automatically inside `/work-init --upgrade`; call it directly to review the manifest edit on its own. |
 

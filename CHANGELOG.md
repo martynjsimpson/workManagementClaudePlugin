@@ -6,6 +6,101 @@ to `version` in [`.claude-plugin/plugin.json`](.claude-plugin/plugin.json) —
 bumping that field is what ships a new version to installed users and, via
 the release workflow, tags a GitHub Release.
 
+## [1.5.0] - 2026-08-28
+
+### Changed
+
+- **Deferred release findings are no longer all converted into requests.** `/work-plan`'s
+  close-out turned every entry in `## Deferred items for PM` into a request in
+  `## Inbox / needs refinement`, one for one. A deferred item is written by an agent with the
+  code open, so it arrives already specified — and refining an already-specified finding into
+  a request and then back out into a work item adds a layer and no information. On a project
+  a few months old that one line was producing the majority of the intake file: requests
+  phrased as technical instructions, tracing to nothing the human recognised.
+
+  A new **Step 1a** triages each entry into exactly one of three destinations instead. A
+  decision only the human can make becomes a request — and anything proposing new user-facing
+  behaviour lands here whatever else it looks like, because a finding that specifies a feature
+  is not the same as anyone having asked for one. Specified work needing no human input goes
+  straight to `backlog.yml`. A finding worth recording but not doing goes to the durable
+  record, named in the report rather than parked in the backlog.
+
+  Entries sharing a cause or a file are merged first, into one work item with several
+  acceptance criteria. Grouping happens at the work item; it never invents a parent request
+  that nobody asked for.
+
+- **`Reviewed:` replaces the per-session note rather than appending to it.** Nothing ever
+  instructed sessions to append a dated paragraph to `Notes:` at each re-check, and nothing
+  told them not to, so they did — on one project `Notes:` reached 73% of the intake file, one
+  request carrying 48 restatements of itself. The transcript was storage for what is really a
+  counter, in files that are version controlled and already hold that history in their commits.
+
+  A re-check now overwrites `Reviewed:` with an incremented count and adds nothing to `Notes:`.
+  The carve-out is a material change — the question changed shape, a new constraint appeared,
+  an adjacent decision overtook it. "Unchanged, still waiting" is not one.
+
+### Added
+
+- **`source_release` on work items, alongside `source_request`.** Exactly one is set: an item
+  traces either to a human ask or to the release that found it. Two keys rather than one
+  free-text field, because the difference answers a question worth asking regularly — every
+  item with a `source_release` and no `source_request` is work nobody asked for. Most is
+  legitimate upkeep; some is scope arriving through the back door, and the split makes that a
+  grep instead of a full read of the backlog.
+
+  Additive: an existing item with neither key is legacy, not invalid, and is backfilled when
+  next touched rather than swept.
+
+- **A step that actually processes spike recommendations.** `/work-spike` and `/work-crunch`
+  both told the human to run `/work-plan` to turn recommendations into requests and backlog
+  items, and `/work-plan` had no step that read a spike document — it knew the word "spike"
+  only as a completion-value format. The handoff worked by improvisation, which is why on one
+  project all seven spike documents were cited dozens of times across the work files and not
+  one was referenced by an `evidence:` field.
+
+  **Step 1b** runs over the spikes closed out in that session only, and triages each
+  recommendation the three ways Step 1a defines. Three things differ, each following from a
+  spike having been commissioned rather than stumbled upon: work derived from a recommendation
+  **inherits the spike item's own provenance** — the request that asked the question, or its
+  `source_release` — so the chain stays legible and spike output correctly stays out of the
+  "nobody asked for this" audit; declining a recommendation costs nothing, because the document
+  is already the durable record; and **every recommendation is accounted for** in the report,
+  by work item, request, or an explicit decline with a reason. Silence is not an outcome.
+
+  **Spike recommendations are now numbered `R1`, `R2`, …**, one number per recommendation,
+  enforced by `/work-spike` when it verifies the document and required before it is accepted.
+  Step 1b's guarantee that every recommendation is accounted for is a count rather than a
+  judgement only if the recommendations can be counted; a document whose recommendations run
+  as continuous prose loses them quietly, and later, when nobody can tell what was missed.
+  Sub-points beneath a recommendation are cited as `R6 item 5` and are detail within it, not
+  separate recommendations. Numbers are stable once written, which is what lets `evidence`
+  cite `<paths.spikes>/<ITEM-ID>.md R4` and stay true. Step 1b numbers an older document's
+  recommendations as it triages them rather than rejecting work that is already finished.
+
+  There is deliberately no `source_spike` key. Provenance asks one question — was this asked
+  for, or found — and a spike is a route between an ask and the work it leads to, not a third
+  origin. `evidence` carries the document path and section.
+
+- **`Parked since:` / `Reviewed:` on requests, `parked_since` / `reviewed` on work items**, and
+  an escalation at five. Once an item has been re-checked five times unchanged, restating it
+  stops being an acceptable outcome: the next review must put three options to the human — do
+  it now, reject it, or park it against a named trigger — and say the count out loud, because
+  the count is the argument. **Reject is offered in those words.** An escalation that only
+  offers "do it" or "keep waiting" is asking the same question a sixth time.
+
+  This makes an emergent behaviour into a guaranteed one. Sessions had begun noticing the
+  pattern by counting their own previous notes — "open and unanswered for twenty-four
+  close-outs" — which worked, but degraded as the notes grew and reset silently whenever anyone
+  tidied them. Storing the count means compressing the file no longer destroys the pressure.
+
+- **A request-voice rule for `Title:` and `Summary:`.** State the effect, not the mechanism;
+  identifiers and paths go in `Notes:`; and a request that asks the human a question ends its
+  `Summary:` with that question rather than burying it partway down `Notes:`. `/work-plan` and
+  `/work-review-deferred` fix the voice of any request they touch, moving displaced detail into
+  `Notes:` rather than discarding it. The rule binds hardest on agent-written requests, which
+  are drafted in the voice of the session that found the problem rather than that of the person
+  who has to decide about it.
+
 ## [1.4.1] - 2026-08-18
 
 ### Fixed

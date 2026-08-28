@@ -293,7 +293,14 @@ the affected path. Never route to a role in `<inactive_agents>`; use its `redire
 
 When an implementer reports a problem outside the release scope, do not absorb it. Record
 it under `## Deferred items for PM` in `active-release.md` with enough detail for the PM
-to triage it as a fresh request, and carry on.
+to triage it without this session, and carry on.
+
+Write what was found and why it matters — not a proposed request. `/work-plan` decides
+where each entry lands: a decision the human must make becomes a request, specified work
+goes straight to `backlog.yml`, and a finding worth recording but not doing goes to the
+durable record. Say plainly which of those you think it is if you have a view, but the
+entry's job is to carry the detail forward, and detail is the one thing that cannot be
+recovered later.
 
 ## Step 6 — Human verification
 

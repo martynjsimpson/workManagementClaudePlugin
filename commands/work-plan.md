@@ -44,8 +44,7 @@ If its status is `ready-for-release` or `released`, close it out before refining
    file for others — report that you saw them, and leave them for `/work-prune`.
 3. Reset `<paths.work>/active-release.md` to `Status: none`, `Version: TBD`, with no
    selected work items.
-4. Process any `## Deferred items for PM` block: turn each entry into a request in
-   `## Inbox / needs refinement`, then remove the block.
+4. Process any `## Deferred items for PM` block per Step 1a below, then remove the block.
 5. Report what you closed out before continuing.
 
 If its status is `abandoned`, process the `## Abandonment note` instead: reset the
@@ -56,6 +55,120 @@ as an explicit list. Do not assume the cleanup was done.
 If its status is `cancelled`, reset the selected work items to `ready` and clear the
 release. No code was written, so there is nothing to revert.
 
+## Step 1a — Triage the deferred items
+
+**A deferred item is a finding, not an ask.** It was written by an agent that had the code
+open, so unlike a human request it usually arrives already specified — which is why routing
+every one of them through `## Inbox / needs refinement` produces requests that read as
+technical instructions rather than as anything a person wanted. Refining an
+already-specified finding into a request and then back out into a work item adds a layer
+and no information.
+
+So do not convert each entry into a request. Triage each one into **exactly one** of three
+destinations.
+
+**First, group.** Read the whole block before writing anything, and merge entries that
+share a cause, a file, or a single sitting of work into one destination — one work item with
+several acceptance criteria, rather than several near-identical items each carrying its own
+review cycle. Grouping happens here, at the work item, and never by inventing a parent
+request that no one asked for.
+
+**(a) It needs a human decision → a request.** Product intent, risk tolerance, a manifest
+fact, anything where an agent would be guessing at what the human wants. Write it into
+`## Inbox / needs refinement` with `Status: needs-refinement`, following the request-voice
+rules in `model.md` — the title states the effect rather than the mechanism, and **the
+`Summary:` ends with the actual question**. Set `Parked since:` to the version being closed
+out and `Reviewed: 0`.
+
+  **Anything proposing new user-facing behaviour lands here, whatever else it looks like.**
+  A finding may describe a feature completely enough to build, and that is not the same as
+  anyone having asked for it. New behaviour is a decision, so it gets a request and waits
+  for an answer.
+
+**(b) It is specified work needing no human decision → a work item.** Defects, upkeep,
+documentation gaps, consistency fixes, anything whose right answer is not in question and
+whose only cost is doing it. Write it straight into `backlog.yml` with
+`source_release: <the version just closed>`, `source_request: null`, and `status: ready` or
+`needs-refinement` as its certainty warrants. **Do not create a request for it.** The
+provenance is recorded, and `source_release` with no `source_request` is exactly how the
+human audits what arrived without being asked.
+
+  Carry the entry's own text into `summary` and `evidence` rather than paraphrasing it
+  down. The detail in a deferred block is the product of a session that had the code in
+  front of it and will not be reconstructible later — this triage exists to stop that
+  detail making a pointless round trip, not to compress it.
+
+**(c) It is worth recording but not worth doing → the durable record.** A note that belongs
+in an ADR, a spec section, or a code comment, with no work attached. Say where it should
+go and name the owning agent, or say plainly that you are dropping it. Do not park it in
+the backlog to be re-read every session by someone who will reach the same conclusion.
+
+Report the split — how many entries came in, how many merged, and how many went to each
+destination — and name every entry you routed to (c), so a decision to drop something is
+visible rather than silent.
+
+## Step 1b — Process spike recommendations
+
+Run this for **every work item you closed out in Step 1 with a `SPIKE: <ITEM-ID>`
+completion value, and only those.** Do not sweep `<paths.spikes>` for older documents; they
+were processed when their own release closed out, and re-reading them produces duplicates of
+work that already exists.
+
+`/work-spike` and `/work-crunch` both tell the human to run this command to process
+recommendations. This is the step that does it — without it, a spike's entire deliverable
+depends on a session remembering to read a file nothing points it at.
+
+For each such item, read `<paths.spikes>/<ITEM-ID>.md` and take its `## Recommendations`
+section. Every recommendation was verified as actionable before the document was accepted,
+so each one is a candidate for work — not a suggestion to weigh from scratch.
+
+**`R1`, `R2`, … are the units.** One number is one recommendation: one thing to route or
+decline. Sub-points beneath a recommendation — `R6 item 5` — are detail within `R6` and are
+not triaged separately; triaging them individually turns one recommendation into five work
+items nobody asked for.
+
+Where a document predates the numbering rule and its recommendations run as prose, do not
+send it back — the release is already closed and the spike is already done. Triage what is
+there, number the recommendations as you go so later citations have something stable to
+point at, and say in your report that you did.
+
+Triage each recommendation the three ways Step 1a defines — a decision for the human becomes
+a request, specified work goes to `backlog.yml`, and a recommendation not worth acting on is
+declined. Group first, as there too: recommendations in one document answer one question and
+frequently belong in one work item.
+
+Three things differ from Step 1a, and each follows from a spike having been commissioned
+rather than stumbled upon.
+
+**Provenance is inherited, never `source_release` for this release.** A spike exists because
+someone asked a question, so work derived from its recommendations traces to that same ask:
+copy the **spike work item's own `source_request`** onto each item you write. Where the spike
+itself carried only a `source_release`, inherit that instead. Either way the chain stays
+legible — request, spike, the work the spike recommended — and spike output correctly stays
+out of the "nobody asked for this" audit, because somebody did.
+
+Set `evidence:` to `<paths.spikes>/<ITEM-ID>.md` plus the recommendation number it came from
+— `docs/spikes/WORK-074.md R4`. That is the field that carries the link; a mention in
+`summary` prose is not a reference anything can follow.
+
+**Declining costs nothing, because the document is already the durable record.** Step 1a's
+third destination is a filing job — the note has to go somewhere or it is lost. Here it does
+not: the recommendation stays in the spike document at a known path, under a heading, for as
+long as the project keeps its spikes. So say plainly that you are not acting on it and why,
+and write nothing further.
+
+**Account for every recommendation.** Unlike a deferred block, where an entry may fairly turn
+out to be noise, a spike's recommendations are its deliverable — commissioned, paid for, and
+quality-gated by `/work-spike` before the document was accepted. Name each one by its number
+in the report and say where it went: a work item ID, a request ID, or declined with a reason.
+Every `R` in the document appears exactly once in that list. Silence is not an available
+outcome, and a recommendation you did not notice is the failure this step exists to prevent —
+the numbering is there so that noticing is a count rather than a judgement.
+
+Before writing anything, check `backlog.yml` and `requests.md` for work that already covers a
+recommendation — a spike's findings are often acted on by hand between sessions. Where one is
+already covered, say so and name what covers it rather than creating a second copy.
+
 ## Step 2 — Check blocked items
 
 Read every request with `Status: blocked` and every work item with `status: blocked`.
@@ -63,7 +176,19 @@ For each, state the named dependency and whether it has resolved. Blocked items 
 checked every session — that is the difference between `blocked` and `deferred`.
 
 Where a blocker has resolved, move the item to `needs-refinement` or `ready` and remove
-the `Blocked on:` / `blocked_on` field.
+the `Blocked on:` / `blocked_on` field. Clear `Parked since:` and `Reviewed:` as you do —
+the item is no longer parked, and a stale count would misreport it at the next check.
+
+Where it has not resolved, apply the review-pressure rules in `model.md`:
+
+- Set `Parked since:` to the current version if the item does not already carry one.
+- Increment `Reviewed:` by one and **replace** the line — do not append a dated paragraph
+  to `Notes:` restating the item. Add to `Notes:` only when something materially changed:
+  the blocker moved, a new constraint appeared, an adjacent decision overtook it.
+- **Once `Reviewed:` reaches 5, stop restating and escalate.** Put the three options to the
+  human — do it now, reject it, or park it against a named trigger — and say the count out
+  loud, because the count is the argument. Reject is offered in those words; an item
+  carried five times is evidence about how much it is wanted.
 
 Do not review `deferred` items here. They are surfaced only by
 `/work-review-deferred`.
@@ -92,6 +217,11 @@ For each:
 5. If it is not covered because it genuinely needs a human decision first (not just
    because nobody has drafted it yet), leave it `partially-done` and ask the specific
    question rather than guessing.
+6. Where you left it unchanged at 2 or 5, apply the review-pressure rules from Step 2:
+   set `Parked since:` if absent, increment and replace `Reviewed:`, and escalate at 5
+   with the three options. A request that has been `partially-done` through five planning
+   sessions is one whose remaining scope nobody wants, and saying so is more useful than
+   checking it a sixth time.
 
 Report what you found: how many partially-done requests exist, how many got a new
 inbox request drafted, how many were already covered, and any misfiled entries you
@@ -110,9 +240,11 @@ Take every request with `Status: inbox` or `needs-refinement`. For each:
    implementer to discover.
 4. Split anything too large for one implementer to finish coherently into multiple work
    items.
-5. Write the work items into `backlog.yml` with every field the model requires. Acceptance
-   criteria must be testable, and strong enough that an implementer needs no historical
-   planning document as a first step.
+5. Write the work items into `backlog.yml` with every field the model requires, including
+   `source_request:` set to this request's ID and `source_release: null` — refinement is
+   the path from an ask, and exactly one provenance key is ever set. Acceptance criteria
+   must be testable, and strong enough that an implementer needs no historical planning
+   document as a first step.
 6. Set `suggested_agents` from `<agents>` only. Never name an agent listed in
    `<inactive_agents>`.
 7. Where `<testing.policy_document>` is set, read it and add any test requirement it
@@ -123,7 +255,17 @@ Take every request with `Status: inbox` or `needs-refinement`. For each:
 
 Where a request genuinely needs a human decision before it can be refined, leave it
 `needs-refinement` and ask the specific question. Do not guess at product intent to keep
-the queue moving.
+the queue moving. Set `Parked since:` to the current version if it has none, increment and
+replace `Reviewed:`, and escalate at 5 as Step 2 describes — a question asked five times
+without an answer is one to withdraw or force, not to ask again.
+
+**Fix the voice of any request you touch.** Where a request you refine has a `Title:` or
+`Summary:` that cannot be understood without opening the code — most often one written by
+an agent from a release finding — rewrite them to the request-voice rules in `model.md` as
+you go: effect rather than mechanism, and the question at the end of the `Summary:` where
+the request is asking one. Move the displaced detail into `Notes:`; do not discard it. A
+request nobody can read is a request nobody will answer, and it will come back to this step
+every session until someone does.
 
 ## Step 5 — Propose release scope
 

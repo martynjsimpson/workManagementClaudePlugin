@@ -37,7 +37,16 @@ Work items: <backlog item IDs once they exist>
 Source: <where the request came from>
 Done in: <version, or SPIKE: <ITEM-ID> — only when done or partially-done>
 Blocked on: <named dependency — only when blocked>
+Parked since: <version or date it first stalled — only while parked>
+Reviewed: <count> — last <version>, <why it is still open> (replaced each review, never appended)
 ```
+
+`Title:` and `Summary:` are written for a person who has not read the code. State the
+effect, not the mechanism; put rule ids, paths and symbol names in `Notes:`; and where the
+request asks the human a question, end the `Summary:` with it.
+
+Once `Reviewed:` reaches 5, the next planning session stops restating the item and asks for
+a decision — do it, reject it, or park it against a named trigger.
 
 ---
 

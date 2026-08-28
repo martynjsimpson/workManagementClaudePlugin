@@ -19,9 +19,20 @@
 #   field is parsed as a version everywhere else. The document is derived from the ID
 #   as {{SPIKES_PATH}}/<ITEM-ID>.md rather than stored, so it survives that path moving.
 #
-# Fields: id, source_request, title, type, capability, status, priority, confidence,
-# summary, acceptance, remaining, dependencies, suggested_agents, evidence, done_in,
-# blocked_on. Full schema and field-by-field semantics: work-model skill.
+#   Provenance: exactly one of source_request / source_release is set. source_request
+#   names the human-facing ask this was refined from; source_release names the release
+#   that found it, for work no one asked for. An item with source_release and no
+#   source_request is upkeep or scope that arrived on its own — which is the point of
+#   keeping them as separate keys rather than one free-text field.
+#
+#   parked_since / reviewed track review pressure on blocked and deferred items. reviewed
+#   is incremented and REPLACED at each re-check, never appended to; at 5 the next review
+#   asks for a decision instead of restating the item.
+#
+# Fields: id, source_request, source_release, title, type, capability, status, priority,
+# confidence, summary, acceptance, remaining, dependencies, suggested_agents, evidence,
+# done_in, blocked_on, parked_since, reviewed. Full schema and field-by-field semantics:
+# work-model skill.
 
 model_version: 1
 

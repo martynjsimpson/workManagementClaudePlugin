@@ -51,12 +51,22 @@ spike concerns a cross-cutting or architectural question. Only names in `<agents
 - the standard for recommendations: specific enough that the PM can write follow-on
   backlog items directly from them. Not observations, not "further investigation is
   warranted" — actionable next steps, and where a decision is needed, the options with a
-  recommendation.
+  recommendation;
+- **the numbering: every recommendation is `R1`, `R2`, … one number per recommendation.**
+  `/work-plan`'s Step 1b accounts for each number separately — routing it to a work item,
+  to a request, or declining it in the report — and cites it in `evidence` as
+  `<paths.spikes>/<ITEM-ID>.md R4`. Recommendations running as continuous prose cannot be
+  accounted for one by one, so a recommendation nobody notices is a recommendation
+  silently lost. Sub-points beneath a recommendation are allowed and are cited as
+  `R6 item 5`; they are detail within `R6`, not recommendations of their own.
 
 **Verify the output** before accepting it. Confirm the file exists, that `## Findings` has
-substantive content, and that `## Recommendations` is actionable. If a recommendation
-could not be turned into a backlog item as written, send it back. A thin spike document is
-worse than none, because it looks like the question was answered.
+substantive content, and that `## Recommendations` is actionable **and numbered `R1`,
+`R2`, …, one number per recommendation**. If a recommendation could not be turned into a
+backlog item as written, or the recommendations run as prose with no numbers to count,
+send it back. A thin spike document is worse than none, because it looks like the question
+was answered — and an unnumbered one costs its recommendations later rather than now,
+which is worse still, because by then nobody knows what was missed.
 
 **Mark it done** in `<paths.work>/active-release.md`, then move on. That is the work item's
 own status line, not the release's — the top-level `Status` stays `in-progress` until Step 3.
@@ -70,8 +80,9 @@ the top-level status alone and does nothing without it, and a release stuck at `
 or `in-progress` is one a later session will offer to run again.
 
 Tell the human which documents were produced and where, then: review the Findings and
-Recommendations in each, and run `/work-plan` to process the recommendations into requests
-and backlog items.
+Recommendations in each, and run `/work-plan`, whose **Step 1b** reads each document this
+release closed out and triages its recommendations into work items and requests. It accounts
+for every recommendation, so anything it declines is named rather than dropped quietly.
 
 Handle the spike documents per `<vcs>`. When `<vcs.system>` is `none`, there is nothing to
 commit — just name the files written. When it is `git` and `<vcs.stages.commit>` is `human`, note
@@ -100,4 +111,5 @@ app.
 - Do not edit `<paths.work>/backlog.yml` or `<paths.work>/requests.md` — `/work-plan`
   closes those out.
 - Do not edit `<paths.work>/project.yml`.
-- Do not accept a document missing either required section.
+- Do not accept a document missing either required section, or one whose recommendations
+  are not numbered.

@@ -80,11 +80,20 @@ touched by hand, verify:
 - **Field names** — requests use `Work items:` (not `Derived work items:`).
 - **Paired fields** — `blocked` carries `Blocked on:` / `blocked_on`; `deferred` does
   not; `done` and `partially-done` carry `Done in:` / `done_in`.
+- **Provenance** — every work item sets **exactly one** of `source_request` /
+  `source_release`, the other being null. Both set is a contradiction and a hard finding.
+  `source_release` holds a release version, never a request ID. Neither set is legacy
+  rather than invalid — `source_release` is newer than most backlogs — so report it as a
+  backfill to do on next touch, not as a failure.
+- **Review pressure** — `Reviewed:` / `reviewed` is a single integer with one accompanying
+  line, not a list. A request accumulating a dated paragraph per planning session has drifted
+  from the model: the count is stored, the history is the commit history, and only a material
+  change is appended to `Notes:`.
 - **Completion values** — every entry in `Done in:` / `done_in` is a release version or
   `SPIKE: <ITEM-ID>`. Free text such as a bare date is drift: a spike bumps no version, so
   it records the marker instead.
 - **Referential integrity** — every ID in `Work items:` exists in `backlog.yml`; every
-  `source_request` exists in `requests.md`; every name in `suggested_agents` exists in
+  non-null `source_request` exists in `requests.md`; every name in `suggested_agents` exists in
   `<agents>` and not in `<inactive_agents>`; every `dependencies` entry resolves.
 - **Ownership** — compute effective ownership as `owns` minus `excludes`, expanding globs and
   treating a parent path as covering its children. No path may then belong to two agents.
