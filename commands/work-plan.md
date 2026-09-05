@@ -279,7 +279,12 @@ Write `<paths.work>/active-release.md` containing:
 - **Release goal** — one paragraph, and the sequencing between items if any.
 - **Selected work items** — ID, title, source request, type, priority, status, and enough
   detail that implementers do not need to ask you questions. Point at `backlog.yml` for
-  the full acceptance criteria rather than duplicating them.
+  the full acceptance criteria rather than duplicating them. Write each item as an H3
+  heading carrying the work ID and title, followed by plain `Key: value` lines — not
+  bullets, not a table, not YAML frontmatter — as the skeleton in the file's own template
+  comment shows. `/work-release` edits an item's `Status:` line in place as it goes; a
+  table turns that into a cell edit sitting next to the release's own top-level `Status:`
+  line, which is the one anything outside the session reads.
 - **Decisions** — every choice you made during refinement that constrains
   implementation, stated as a decision, not as a discussion.
 - **Decisions needed** — anything still open, and who must resolve it.
