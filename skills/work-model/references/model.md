@@ -358,6 +358,14 @@ It contains: the release goal, selected work item IDs with their status, out-of-
 items, decisions made and decisions needed, required agents, blockers, verification
 bar, and the version once known.
 
+`Version:` and `Status:` are plain `Key: value` lines at the top of the file, above the
+first section — the release's external interface, read by anything outside the running
+session. Each selected work item is written the way a request is: an H3 heading carrying
+the work ID and title, followed by plain `Key: value` lines — not bullets, not a table,
+not YAML frontmatter. `/work-release` edits an item's `Status:` line in place as delivery
+proceeds, and a table turns that into a cell edit sitting beside the release's own
+top-level `Status:` line.
+
 A release may open as:
 
 ```text

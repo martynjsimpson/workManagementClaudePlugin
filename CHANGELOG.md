@@ -6,6 +6,29 @@ to `version` in [`.claude-plugin/plugin.json`](.claude-plugin/plugin.json) —
 bumping that field is what ships a new version to installed users and, via
 the release workflow, tags a GitHub Release.
 
+## [1.6.1] - 2026-09-05
+
+### Fixed
+
+- **The shape of a selected work item in `active-release.md` is now stated, not implied.**
+  The file's own template comment showed each item as an H3 heading with plain `Key: value`
+  lines, but the comment is written over by the first `/work-plan` and nothing else carried
+  the rule: Step 5 listed the fields an item must contain and said nothing about how to lay
+  them out, and the model reference described the file by content alone. A planning session
+  reading either one had to invent a layout, so the same project produced a list one release
+  and a table the next.
+
+  Step 5 and the `## Active release` section of the model reference now prescribe the item
+  shape in the same words `requests.md` already uses — an H3 heading carrying the work ID and
+  title, then plain `Key: value` lines, not bullets, not a table, not YAML frontmatter — and
+  the model reference also states outright that `Version:` and `Status:` are top-of-file
+  lines. The reason is `/work-release`, which edits an item's `Status:` in place as delivery
+  proceeds: under a table that becomes a cell edit sitting beside the release's own top-level
+  `Status:` line, which is what anything outside the session reads.
+
+  Releases already written as tables are untouched and still deliver; the rule applies to the
+  next one `/work-plan` writes.
+
 ## [1.6.0] - 2026-08-28
 
 ### Changed
